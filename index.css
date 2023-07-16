@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Open Sans', sans-serif;
+}
+
+@layer components {
+  a {
+    @apply text-cyan-600;
+  }
+  a:hover {
+    @apply underline underline-offset-1;
+  }
+}
