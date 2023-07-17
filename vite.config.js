@@ -4,6 +4,9 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   base: 'https://gmoralesc.github.io/',
+  server: {
+    https: true,
+  },
   build: {
     rollupOptions: {
       input: {
