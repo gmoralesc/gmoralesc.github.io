@@ -1,16 +1,53 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-body {
-  font-family: 'Open Sans', sans-serif;
+:root {
+  --primary: #333;
 }
 
-@layer components {
-  a {
-    @apply text-cyan-600;
-  }
-  a:hover {
-    @apply underline underline-offset-1;
-  }
+nav {
+  background-color: var(--lt-color-white);
+}
+
+nav a {
+  color: var(--lt-color-black);
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+h1 {
+  margin-bottom: var(--spacing);
+  text-align: center;
+}
+
+.text-center {
+  text-align: center;
+}
+
+header img {
+  border-radius: 50%;
+  width: 40%;
+}
+
+header p {
+  margin-bottom: var(--spacing);
+}
+
+footer {
+  background-color: var(--lt-color-white);
+  text-align: center;
+  padding: var(--spacing);
+}
+
+footer p {
+  color: var(--lt-color-black);
+}
+
+footer ul {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing);
+}
+
+footer ul li {
+  list-style-type: none;
 }
