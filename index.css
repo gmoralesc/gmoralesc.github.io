@@ -2,6 +2,18 @@
   --primary: #333;
 }
 
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+h1 {
+  margin-bottom: var(--spacing);
+  text-align: center;
+}
+
 nav {
   background-color: var(--contrast);
 }
@@ -14,22 +26,10 @@ nav a:hover {
   text-decoration: underline;
 }
 
-h1 {
-  margin-bottom: var(--spacing);
-  text-align: center;
-}
-
-.text-center {
-  text-align: center;
-}
-
-header img {
-  border-radius: 50%;
-  width: 40%;
-}
-
-header p {
-  margin-bottom: var(--spacing);
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 footer {
@@ -54,4 +54,12 @@ footer ul li {
 
 footer .icon-contrast-inverse {
   fill: var(--contrast-inverse);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.rounded {
+  border-radius: 50%;
 }
