@@ -3,11 +3,11 @@
 }
 
 nav {
-  background-color: var(--lt-color-white);
+  background-color: var(--contrast);
 }
 
 nav a {
-  color: var(--lt-color-black);
+  color: var(--contrast-inverse);
 }
 
 nav a:hover {
@@ -33,13 +33,13 @@ header p {
 }
 
 footer {
-  background-color: var(--lt-color-white);
+  background-color: var(--contrast);
   text-align: center;
   padding: var(--spacing);
 }
 
 footer p {
-  color: var(--lt-color-black);
+  color: var(--contrast-inverse);
 }
 
 footer ul {
@@ -50,4 +50,8 @@ footer ul {
 
 footer ul li {
   list-style-type: none;
+}
+
+footer .icon-contrast-inverse {
+  fill: var(--contrast-inverse);
 }
