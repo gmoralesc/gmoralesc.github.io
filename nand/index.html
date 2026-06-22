@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="system">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Logic Gate Builder</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header id="topbar">
+      <div class="topbar-left">
+        <input id="title" type="text" spellcheck="false" placeholder="name your gate…" />
+        <div id="io-controls">
+          <span class="io-label">Groups</span>
+          <button data-act="add-in"  title="Add input group">+ in</button>
+          <button data-act="del-in"  title="Remove last input group">− in</button>
+          <button data-act="add-out" title="Add output group">+ out</button>
+          <button data-act="del-out" title="Remove last output group">− out</button>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <div id="theme-bar" role="group" aria-label="Theme">
+          <button data-theme-opt="system" title="Match system theme">Auto</button>
+          <button data-theme-opt="light"  title="Light theme">Light</button>
+          <button data-theme-opt="dark"   title="Dark theme">Dark</button>
+        </div>
+
+        <label class="switch" title="Show / hide the truth table">
+          <input type="checkbox" id="tt-toggle" />
+          <span class="track"><span class="thumb"></span></span>
+          <span class="switch-label">Truth table</span>
+        </label>
+      </div>
+    </header>
+
+    <div id="canvas">
+      <svg id="wires"></svg>
+      <div id="nodes"></div>
+      <div id="truth" hidden></div>
+    </div>
+
+    <footer id="toolbar"></footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
