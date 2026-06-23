@@ -59,14 +59,128 @@
   var state = freshState();   // call only after uid + nextId are initialized
   var selected = null;        // id of selected gate
 
+  // ---- challenges -----------------------------------------------------------
+  // Each challenge is fully declarative:
+  //   io    - inputs/outputs as groups. A group is either a string (1-bit,
+  //           e.g. 'A') or { name, bits } for a multi-bit bus (e.g.
+  //           { name: 'A', bits: 4 }). "Set up" applies this interface to the
+  //           canvas; the flat bit-count derives from the widths.
+  //   table - the target truth table: one row per input combination, in
+  //           canonical order (first input bit is most-significant, so rows go
+  //           00..11 / 000..111). Each row lists the expected output bits,
+  //           aligned to the flattened io.outputs. For big tables use
+  //           buildTable(nInputBits, fn) rather than writing rows by hand.
+  //   showTable - set false to hide the truth-table panel while this
+  //           challenge is active (defaults to shown).
+  function buildTable(nIn, fn) {
+    var rows = [];
+    for (var m = 0; m < (1 << nIn); m++) {
+      var combo = [];
+      for (var i = 0; i < nIn; i++) combo.push((m >> (nIn - 1 - i)) & 1);
+      rows.push(fn(combo).map(function (v) { return v ? 1 : 0; }));
+    }
+    return rows;
+  }
+
+  var SCENARIOS = [
+    {
+      name: 'NAND',
+      io: { inputs: ['A', 'B'], outputs: ['Out'] },
+      hint: 'NOT (A AND B) — true unless both inputs are on.',
+      //       A B -> Out
+      table: [ [1],   // 0 0
+               [1],   // 0 1
+               [1],   // 1 0
+               [0] ]  // 1 1
+    },
+    {
+      name: 'OR',
+      io: { inputs: ['A', 'B'], outputs: ['Out'] },
+      hint: 'A OR B — De Morgan: NOT(NOT A AND NOT B).',
+      //       A B -> Out
+      table: [ [0],   // 0 0
+               [1],   // 0 1
+               [1],   // 1 0
+               [1] ]  // 1 1
+    },
+    {
+      name: 'XOR',
+      io: { inputs: ['A', 'B'], outputs: ['Out'] },
+      hint: 'A XOR B — on only when the inputs differ.',
+      //       A B -> Out
+      table: [ [0],   // 0 0
+               [1],   // 0 1
+               [1],   // 1 0
+               [0] ]  // 1 1
+    },
+    {
+      name: 'ADDER',
+      io: { inputs: ['A', 'B', 'Carry'], outputs: ['Sum', 'Carry'] },
+      showTable: false,
+      hint: '1-bit full adder. Inputs A, B, Carry (carry-in). Sum = A⊕B⊕Carry, Carry-out = majority(A, B, Carry).',
+      //       A B Carry -> Sum Carry
+      table: [ [0, 0],   // 0 0 0
+               [1, 0],   // 0 0 1
+               [1, 0],   // 0 1 0
+               [0, 1],   // 0 1 1
+               [1, 0],   // 1 0 0
+               [0, 1],   // 1 0 1
+               [0, 1],   // 1 1 0
+               [1, 1] ]  // 1 1 1
+    },
+    {
+      name: 'ADDER4',
+      io: {
+        inputs:  [ { name: 'A', bits: 4 }, { name: 'B', bits: 4 }, { name: 'Carry', bits: 1 } ],
+        outputs: [ { name: 'Sum', bits: 4 }, { name: 'Carry', bits: 1 } ]
+      },
+      showTable: false,
+      hint: '4-bit adder. A and B are 4-bit buses, Carry is the carry-in. Sum is 4 bits, ' +
+            'Carry is the carry-out — chain four 1-bit ADDERs along the carry.',
+      // 9 input bits -> 512 rows. A/B are 4-bit buses with the top member = LSB,
+      // matching the canvas decimal badges; Sum likewise (top member = LSB).
+      table: buildTable(9, function (b) {
+        var A = b[0] | (b[1] << 1) | (b[2] << 2) | (b[3] << 3);   // A0 (top) = LSB
+        var B = b[4] | (b[5] << 1) | (b[6] << 2) | (b[7] << 3);   // B0 (top) = LSB
+        var s = A + B + b[8];                                     // b[8] = carry-in
+        return [ s & 1, (s >> 1) & 1, (s >> 2) & 1, (s >> 3) & 1, (s >> 4) & 1 ];
+      })
+    }
+  ];
+
+  // expected output row for an input combination (first input = most-significant)
+  function targetRow(sc, combo) {
+    var idx = 0;
+    for (var i = 0; i < combo.length; i++) idx = (idx << 1) | (combo[i] ? 1 : 0);
+    return sc.table[idx] || [];
+  }
+
+  // io groups may be a string (1-bit) or { name, bits }; these normalize them
+  function ioName(g)  { return typeof g === 'string' ? g : g.name; }
+  function ioWidth(g) { return typeof g === 'string' ? 1 : (g.bits || 1); }
+  function ioBits(list) { return list.reduce(function (s, g) { return s + ioWidth(g); }, 0); }
+  // flat per-bit labels (suffix the bit index for multi-bit groups: A0, A1…)
+  function ioBitNames(list) {
+    var names = [];
+    list.forEach(function (g) {
+      var w = ioWidth(g), nm = ioName(g);
+      for (var i = 0; i < w; i++) names.push(w > 1 ? nm + i : nm);
+    });
+    return names;
+  }
+  var chMsg = {};             // scenario name -> { ok, text } feedback shown in the panel
+
   // ---- DOM refs -------------------------------------------------------------
-  var canvasEl  = document.getElementById('canvas');
-  var svgEl     = document.getElementById('wires');
-  var nodesEl   = document.getElementById('nodes');
-  var toolbarEl = document.getElementById('toolbar');
-  var titleEl   = document.getElementById('title');
-  var truthEl   = document.getElementById('truth');
-  var ttToggle  = document.getElementById('tt-toggle');
+  var canvasEl   = document.getElementById('canvas');
+  var svgEl      = document.getElementById('wires');
+  var nodesEl    = document.getElementById('nodes');
+  var gateListEl = document.getElementById('gate-list');
+  var createBtn  = document.getElementById('create-btn');
+  var resetBtn   = document.getElementById('reset-btn');
+  var titleEl    = document.getElementById('title');
+  var truthEl    = document.getElementById('truth');
+  var truthWrapEl = document.getElementById('truth-wrap');
+  var chListEl   = document.getElementById('ch-list');
 
   // ===========================================================================
   //  SIMULATION
@@ -149,7 +263,13 @@
   //  LAYOUT  (positions are derived, so adding/removing nodes redistributes)
   // ===========================================================================
   function gateWidth(def) { return Math.max(54, def.name.length * 9 + 22); }
-  function portY(i, n) { return GATE_H * (i + 1) / (n + 1); }
+  // gates with up to 2 ports keep the base height; ones with more grow taller
+  // so the 13px port dots don't crowd (~18px of pitch between adjacent ports).
+  function gateHeight(def) {
+    var n = Math.max(def.inputs, def.outputs, 1);
+    return n <= 2 ? GATE_H : (n + 1) * 18;
+  }
+  function portY(i, n, h) { return h * (i + 1) / (n + 1); }
 
   var MEMBER_GAP = 40;   // vertical gap between members within a group
 
@@ -185,9 +305,9 @@
     if (ref.owner.indexOf('out') === 0 && L.outputY[ref.owner] !== undefined)
       return { x: L.outPortX, y: L.outputY[ref.owner] };
     var g = findGate(ref.owner);
-    var def = library[g.def], w = gateWidth(def);
-    if (ref.side === 'in')  return { x: g.x,     y: g.y + portY(ref.index, def.inputs) };
-    return { x: g.x + w, y: g.y + portY(ref.index, def.outputs) };
+    var def = library[g.def], w = gateWidth(def), h = gateHeight(def);
+    if (ref.side === 'in')  return { x: g.x,     y: g.y + portY(ref.index, def.inputs, h) };
+    return { x: g.x + w, y: g.y + portY(ref.index, def.outputs, h) };
   }
 
   function findGate(id) {
@@ -236,14 +356,14 @@
     var html = '';
 
     state.gates.forEach(function (g) {
-      var def = library[g.def], w = gateWidth(def);
+      var def = library[g.def], w = gateWidth(def), h = gateHeight(def);
       html += '<div class="gate' + (selected === g.id ? ' selected' : '') + '" data-gate="' + g.id +
-              '" style="left:' + g.x + 'px;top:' + g.y + 'px;width:' + w + 'px;background:' + def.color + '">' +
+              '" style="left:' + g.x + 'px;top:' + g.y + 'px;width:' + w + 'px;height:' + h + 'px;background:' + def.color + '">' +
               esc(def.name);
       for (var i = 0; i < def.inputs; i++)
-        html += port(g.id, 'in', i, 0, portY(i, def.inputs));
+        html += port(g.id, 'in', i, 0, portY(i, def.inputs, h));
       for (var j = 0; j < def.outputs; j++)
-        html += port(g.id, 'out', j, w, portY(j, def.outputs));
+        html += port(g.id, 'out', j, w, portY(j, def.outputs, h));
       html += '</div>';
     });
 
@@ -274,6 +394,7 @@
     nodesEl.innerHTML = html;
     titleEl.value = state.title;
     renderTruthTable();
+    renderChallenges();
   }
 
   // editable group name, above the group's members
@@ -284,10 +405,12 @@
            '<input class="grp-name" data-name-for="' + g.id + '" spellcheck="false" value="' + esc(g.name || '') + '" />' +
            '</div>';
   }
-  // decimal value of a group's bits (top member = most-significant bit)
+  // decimal value of a group's bits. The top member is the least-significant
+  // bit (2^0); each member added below it is the next higher power — so adding
+  // a bit at the bottom doesn't change the weight of the bits already there.
   function groupValue(g, valueOf) {
-    var n = g.members.length, v = 0;
-    g.members.forEach(function (m, i) { v += (valueOf(m) ? 1 : 0) * Math.pow(2, n - 1 - i); });
+    var v = 0;
+    g.members.forEach(function (m, i) { v += (valueOf(m) ? 1 : 0) * Math.pow(2, i); });
     return v;
   }
   // decimal badge in the outer margin (left of inputs / right of outputs)
@@ -322,13 +445,11 @@
   function esc(s) { return s.replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
 
   function renderToolbar() {
-    var html = '<span class="tool create" data-act="create">CREATE</span>';
-    Object.keys(library).forEach(function (name) {
+    gateListEl.innerHTML = Object.keys(library).map(function (name) {
       var def = library[name];
-      html += '<span class="tool palette" data-palette="' + name + '">' +
-              '<span class="sw" style="background:' + def.color + '"></span>' + esc(name) + '</span>';
-    });
-    toolbarEl.innerHTML = html;
+      return '<span class="tool palette" data-palette="' + name + '" title="Drag onto the canvas">' +
+             '<span class="sw" style="background:' + def.color + '"></span>' + esc(name) + '</span>';
+    }).join('');
   }
 
   // ===========================================================================
@@ -414,13 +535,12 @@
     render();
   });
 
-  toolbarEl.addEventListener('pointerdown', function (e) {
+  gateListEl.addEventListener('pointerdown', function (e) {
     var pal = e.target.closest('[data-palette]');
     if (pal) { startPaletteDrag(pal.getAttribute('data-palette'), e); return; }
   });
-  toolbarEl.addEventListener('click', function (e) {
-    if (e.target.closest('[data-act="create"]')) createGate();
-  });
+  createBtn.addEventListener('click', createGate);
+  resetBtn.addEventListener('click', resetProgress);
 
   // delete selected gate
   window.addEventListener('keydown', function (e) {
@@ -452,15 +572,15 @@
 
   // ---- drag: spawn a gate from the palette ----------------------------------
   function startPaletteDrag(name, e) {
-    var def = library[name], w = gateWidth(def);
+    var def = library[name], w = gateWidth(def), h = gateHeight(def);
     var ghost = document.createElement('div');
     ghost.className = 'gate ghost';
-    ghost.style.width = w + 'px'; ghost.style.height = GATE_H + 'px';
+    ghost.style.width = w + 'px'; ghost.style.height = h + 'px';
     ghost.style.background = def.color; ghost.textContent = name;
     document.body.appendChild(ghost);
     var place = function (ev) {
       ghost.style.left = (ev.clientX - w / 2) + 'px';
-      ghost.style.top  = (ev.clientY - GATE_H / 2) + 'px';
+      ghost.style.top  = (ev.clientY - h / 2) + 'px';
     };
     place(e);
     drag(e, place, function (ev) {
@@ -468,7 +588,7 @@
       var r = canvasEl.getBoundingClientRect();
       if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) {
         var p = canvasPoint(ev);
-        state.gates.push({ id: nextId('g'), def: name, x: p.x - w / 2, y: p.y - GATE_H / 2 });
+        state.gates.push({ id: nextId('g'), def: name, x: p.x - w / 2, y: p.y - h / 2 });
         render();
       }
     });
@@ -534,24 +654,16 @@
   // ===========================================================================
   //  CREATE GATE  (snapshot current canvas -> reusable definition)
   // ===========================================================================
-  function createGate() {
-    var name = state.title.trim().toUpperCase();
-    if (!name) { flashTitle(); return; }
-    if (library[name] && library[name].type === 'primitive') {
-      alert('"' + name + '" is a built-in gate name. Choose another.');
-      return;
-    }
-    if (state.gates.length === 0) { alert('Add and wire some gates first.'); return; }
-
+  // snapshot the current canvas into a reusable custom-gate definition.
+  // a created gate is a black box of bit-ports; groups don't carry into the definition.
+  function makeDef(name) {
     var L = layout();
     var sortByY = function (members, yMap) {
       return members.slice().sort(function (a, b) { return yMap[a.id] - yMap[b.id]; });
     };
-    // a created gate is a black box of bit-ports; groups don't carry into the definition
     var inputs  = sortByY(flatInputs(),  L.inputY ).map(function (m) { return { id: m.id }; });
     var outputs = sortByY(flatOutputs(), L.outputY).map(function (m) { return { id: m.id }; });
-
-    var def = {
+    return {
       name: name,
       type: 'custom',
       color: COLORS[customCount() % COLORS.length],
@@ -564,8 +676,18 @@
         wires:   state.wires.map(function (w) { return { from: w.from, to: w.to }; })
       }
     };
+  }
 
-    library[name] = def;
+  function createGate() {
+    var name = state.title.trim().toUpperCase();
+    if (!name) { flashTitle(); return; }
+    if (library[name] && library[name].type === 'primitive') {
+      alert('"' + name + '" is a built-in gate name. Choose another.');
+      return;
+    }
+    if (state.gates.length === 0) { alert('Add and wire some gates first.'); return; }
+
+    library[name] = makeDef(name);
     persist();
     state = freshState();
     selected = null;
@@ -582,6 +704,163 @@
     titleEl.style.color = 'var(--hot)';
     setTimeout(function () { titleEl.style.color = ''; }, 250);
   }
+
+  // ===========================================================================
+  //  CHALLENGES  (build a target gate from the primitives, verify, then keep it)
+  // ===========================================================================
+  // a scenario is "solved" once a custom gate of that name exists in the library
+  function isSolved(name) { return !!(library[name] && library[name].type === 'custom'); }
+  // a scenario unlocks only after every earlier scenario is solved
+  function isUnlocked(i) {
+    for (var k = 0; k < i; k++) if (!isSolved(SCENARIOS[k].name)) return false;
+    return true;
+  }
+  function indexOfScenario(name) {
+    for (var i = 0; i < SCENARIOS.length; i++) if (SCENARIOS[i].name === name) return i;
+    return -1;
+  }
+  // the challenge currently being worked on: first unlocked-but-unsolved scenario
+  function activeChallenge() {
+    for (var i = 0; i < SCENARIOS.length; i++)
+      if (isUnlocked(i) && !isSolved(SCENARIOS[i].name)) return SCENARIOS[i];
+    return null;
+  }
+  var compareOff = false;   // session toggle: show the plain truth table instead of the diff
+
+  function chFeedback(name, ok, text) { chMsg[name] = { ok: ok, text: text }; renderChallenges(); }
+
+  // run every input combination through the canvas and compare to the target;
+  // on a full match, snapshot the canvas as a reusable gate of the scenario's name.
+  function checkScenario(name) {
+    var idx = indexOfScenario(name);
+    if (idx < 0 || !isUnlocked(idx)) return;   // ignore locked / unknown
+    var sc = SCENARIOS[idx];
+
+    var bits = function (n) { return n + ' ' + (n === 1 ? 'bit' : 'bits'); };
+    var nIn = ioBits(sc.io.inputs), nOut = ioBits(sc.io.outputs);
+    var fin = flatInputs(), fout = flatOutputs();
+    if (state.gates.length === 0)
+      return chFeedback(name, false, 'Add and wire some gates first.');
+    if (fin.length !== nIn)
+      return chFeedback(name, false, 'Needs exactly ' + bits(nIn) + ' of input (you have ' + fin.length + ').');
+    if (fout.length !== nOut)
+      return chFeedback(name, false, 'Needs exactly ' + bits(nOut) + ' of output (you have ' + fout.length + ').');
+
+    var total = Math.pow(2, nIn);
+    for (var m = 0; m < total; m++) {
+      var combo = [];
+      for (var i = 0; i < nIn; i++) combo.push((m >> (nIn - 1 - i)) & 1);   // first input = MSB
+      var got  = evaluateCircuit(circuitOf(), combo).outputs;
+      var want = targetRow(sc, combo);
+      for (var j = 0; j < nOut; j++) {
+        if ((got[j] ? 1 : 0) !== (want[j] ? 1 : 0)) {
+          var label = ioBitNames(sc.io.outputs)[j] || ('output #' + (j + 1));
+          return chFeedback(name, false,
+            'Not yet — for inputs ' + combo.join(', ') + ', ' + label +
+            ' gives ' + (got[j] ? 1 : 0) + ', expected ' + (want[j] ? 1 : 0) + '.');
+        }
+      }
+    }
+
+    // passed: store the gate, clear the canvas for the next build
+    library[name] = makeDef(name);
+    persist();
+    chMsg[name] = { ok: true, text: 'Solved! ' + name + ' is now in your palette.' };
+    state = freshState();
+    selected = null;
+    renderToolbar();
+    render();             // refresh challenges/table
+    autoSetupActive();    // and configure the canvas for the next challenge
+  }
+
+  // apply a challenge's declared interface to the canvas (named input/output
+  // groups). gates are kept; wires tied to the replaced I/O are dropped.
+  function setupChallengeIO(name) {
+    var i = indexOfScenario(name);
+    if (i < 0 || !isUnlocked(i) || isSolved(name)) return;   // only the active challenge
+    var sc = SCENARIOS[i];
+    var oldIo = flatInputs().concat(flatOutputs()).map(function (m) { return m.id; });
+    state.inputs = sc.io.inputs.map(function (g) {
+      var grp = newInputGroup(ioName(g));
+      for (var k = 1; k < ioWidth(g); k++) grp.members.push({ id: nextId('in'), value: 0 });
+      return grp;
+    });
+    state.outputs = sc.io.outputs.map(function (g) {
+      var grp = newOutputGroup(ioName(g));
+      for (var k = 1; k < ioWidth(g); k++) grp.members.push({ id: nextId('out') });
+      return grp;
+    });
+    state.wires = state.wires.filter(function (w) {
+      return oldIo.indexOf(w.from.owner) < 0 && oldIo.indexOf(w.to.owner) < 0;
+    });
+    chMsg[name] = null;
+    render();
+  }
+
+  // match the canvas to the active challenge automatically — called when the
+  // active challenge changes (boot / after a solve / after reset). only acts
+  // when the shape doesn't already fit, so a canvas in progress is left alone.
+  function autoSetupActive() {
+    var sc = activeChallenge();
+    if (!sc) return;
+    if (flatInputs().length === ioBits(sc.io.inputs) &&
+        flatOutputs().length === ioBits(sc.io.outputs)) return;
+    setupChallengeIO(sc.name);   // re-renders
+  }
+
+  // wipe custom gates + progress, leaving only the AND / NOT primitives
+  function resetProgress() {
+    if (!window.confirm('Delete all custom gates and challenge progress? AND and NOT will remain.')) return;
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    Object.keys(library).forEach(function (k) {
+      if (library[k].type !== 'primitive') delete library[k];
+    });
+    chMsg = {};
+    state = freshState();
+    selected = null;
+    renderToolbar();
+    render();
+    autoSetupActive();
+  }
+
+  // compact checklist; the active row (first unlocked, unsolved) is expanded
+  // with its hint, Check button, and last feedback. solved rows offer Rebuild.
+  function renderChallenges() {
+    chListEl.innerHTML = SCENARIOS.map(function (sc, i) {
+      var done = isSolved(sc.name);
+      var unlocked = isUnlocked(i);
+      var active = unlocked && !done;                 // sequential -> at most one active
+      var cls = done ? 'done' : (active ? 'active' : 'locked');
+      var status = done ? '✓' : (active ? '○' : '🔒');
+      // offer "Set up" when the canvas I/O shape doesn't match the challenge yet
+      var needsSetup = active &&
+        (flatInputs().length !== ioBits(sc.io.inputs) || flatOutputs().length !== ioBits(sc.io.outputs));
+      var action = '';
+      if (done) {
+        action = '<button class="ch-check" data-check="' + sc.name + '">Rebuild</button>';
+      } else if (active) {
+        action = (needsSetup ? '<button class="ch-setup" data-setup="' + sc.name + '">Set up</button>' : '') +
+                 '<button class="ch-check" data-check="' + sc.name + '">Check</button>';
+      }
+      var msg = chMsg[sc.name];
+      return '<div class="ch-row ' + cls + '">' +
+               '<div class="ch-row-top">' +
+                 '<span class="ch-status">' + status + '</span>' +
+                 '<span class="ch-name">' + esc(sc.name) + '</span>' +
+                 (action ? '<span class="ch-actions">' + action + '</span>' : '') +
+               '</div>' +
+               (active ? '<div class="ch-hint">' + esc(sc.hint) + '</div>' : '') +
+               (active && msg ? '<div class="ch-msg ' + (msg.ok ? 'ok' : 'err') + '">' + esc(msg.text) + '</div>' : '') +
+             '</div>';
+    }).join('');
+  }
+
+  chListEl.addEventListener('click', function (e) {
+    var c = e.target.closest('[data-check]');
+    if (c) { checkScenario(c.getAttribute('data-check')); return; }
+    var s = e.target.closest('[data-setup]');
+    if (s) setupChallengeIO(s.getAttribute('data-setup'));
+  });
 
   // ===========================================================================
   //  PERSISTENCE
@@ -604,7 +883,6 @@
   // ===========================================================================
   //  TRUTH TABLE  (every input combination evaluated through the simulator)
   // ===========================================================================
-  var TT_KEY  = 'logicgates.truthtable';
   var TT_MAX_INPUTS = 10;   // 2^10 = 1024 rows; beyond this we just show a note
 
   // one column per bit-member; multi-member groups suffix the bit index (A0, A1…)
@@ -619,44 +897,86 @@
   }
 
   function renderTruthTable() {
-    if (truthEl.hidden) return;
+    // some challenges (e.g. the multi-bit adders) opt out of the truth table
+    var sc = activeChallenge();
+    truthWrapEl.hidden = !!(sc && sc.showTable === false);
+    if (truthWrapEl.hidden) return;
+
     var n = flatInputs().length;
     if (n > TT_MAX_INPUTS) {
       truthEl.innerHTML = '<div class="tt-note">Too many inputs to tabulate (max ' + TT_MAX_INPUTS + ' bits).</div>';
       return;
     }
+    // diff against the active challenge: compare each output bit to its target.
+    var nOut = flatOutputs().length;
+    var fits = sc && ioBits(sc.io.inputs) === n && ioBits(sc.io.outputs) === nOut;   // shapes line up -> can compare
+    var comparing = !!fits && !compareOff;
+
     var cols = memberCols(state.inputs).concat(memberCols(state.outputs));
     var head = '<tr>' + cols.map(function (name) { return '<th>' + esc(name) + '</th>'; }).join('') + '</tr>';
 
-    var body = '';
+    var body = '', matches = 0;
     var total = Math.pow(2, n);
     for (var m = 0; m < total; m++) {
       var combo = [];
       for (var i = 0; i < n; i++) combo.push((m >> (n - 1 - i)) & 1);   // first input bit = most-significant
       var outs = evaluateCircuit(circuitOf(), combo).outputs;
+      var want = comparing ? targetRow(sc, combo) : null;
+      var rowOk = true;
+      var outCells = '';
+      for (var j = 0; j < outs.length; j++) {
+        var v = outs[j] ? 1 : 0;
+        if (comparing && v !== (want[j] ? 1 : 0)) {
+          rowOk = false;
+          outCells += '<td class="v' + v + ' tt-bad" title="expected ' + (want[j] ? 1 : 0) + '">' +
+                      v + '<span class="tt-want">' + (want[j] ? 1 : 0) + '</span></td>';
+        } else {
+          outCells += '<td class="v' + v + '">' + v + '</td>';
+        }
+      }
+      if (comparing && rowOk) matches++;
       body += '<tr>' +
-        combo.map(function (v) { return '<td class="v' + v + '">' + v + '</td>'; }).join('') +
-        outs.map(function (v)  { return '<td class="v' + v + '">' + v + '</td>'; }).join('') + '</tr>';
+        combo.map(function (cv) { return '<td class="v' + cv + '">' + cv + '</td>'; }).join('') +
+        outCells + '</tr>';
     }
-    truthEl.innerHTML = '<table><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
+
+    truthEl.innerHTML = compareBar(sc, comparing, matches, total, n, nOut) +
+      '<table><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
   }
 
-  function applyTruthVisible(on) {
-    truthEl.hidden = !on;
-    ttToggle.checked = on;
-    if (on) renderTruthTable();
+  // status strip above the table: live match count, shape hint, or a paused toggle
+  function compareBar(sc, comparing, matches, total, n, nOut) {
+    if (!sc) return '';
+    if (comparing) {
+      var ok = matches === total;
+      return '<div class="tt-bar' + (ok ? ' ok' : '') + '">' +
+               '<span>' + esc(sc.name) + ' &middot; ' + matches + ' / ' + total + (ok ? ' ✓' : '') + '</span>' +
+               '<button data-tt="cmp-off" title="Show the plain table">Plain</button>' +
+             '</div>';
+    }
+    if (compareOff) {
+      return '<div class="tt-bar">' +
+               '<span>Comparison paused</span>' +
+               '<button data-tt="cmp-on" title="Compare against ' + esc(sc.name) + '">Compare ' + esc(sc.name) + '</button>' +
+             '</div>';
+    }
+    // unlocked challenge but the canvas shape doesn't match yet
+    var nIn = ioBits(sc.io.inputs), no = ioBits(sc.io.outputs);
+    var needIn  = nIn + ' input bit'  + (nIn === 1 ? '' : 's');
+    var needOut = no  + ' output bit' + (no  === 1 ? '' : 's');
+    return '<div class="tt-bar">' +
+             '<span>For ' + esc(sc.name) + ', use ' + needIn + ' &amp; ' + needOut +
+             ' (you have ' + n + ' / ' + nOut + ').</span>' +
+           '</div>';
   }
 
-  ttToggle.addEventListener('change', function () {
-    try { localStorage.setItem(TT_KEY, ttToggle.checked ? '1' : '0'); } catch (e) {}
-    applyTruthVisible(ttToggle.checked);
+  // pause / resume the challenge diff inside the always-on truth table
+  truthEl.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-tt]');
+    if (!b) return;
+    compareOff = b.getAttribute('data-tt') === 'cmp-off';
+    renderTruthTable();
   });
-
-  function restoreTruth() {
-    var v;
-    try { v = localStorage.getItem(TT_KEY); } catch (e) {}
-    applyTruthVisible(v === '1');
-  }
 
   // ===========================================================================
   //  THEME  (Auto / Light / Dark — Auto follows the OS via CSS media query)
@@ -690,10 +1010,10 @@
   //  BOOT
   // ===========================================================================
   restoreTheme();
-  restoreTruth();
   restore();
   renderToolbar();
   render();
+  autoSetupActive();   // configure the canvas for whichever challenge is active on load
 
   // Re-render whenever the canvas is actually sized. A ResizeObserver fires
   // once right after the first layout (fixing a stale first-paint size) and on

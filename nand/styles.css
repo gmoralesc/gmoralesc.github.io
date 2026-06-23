@@ -16,6 +16,7 @@
   --panel-hover:  #303038;
   --placeholder:  #3a3a40;
   --tool-text:    #cfcfd4;
+  --good:         #1f8a70;
 }
 
 /* ---- light theme ---- */
@@ -34,6 +35,7 @@ html[data-theme="light"] {
   --panel-hover:  #d0d0d8;
   --placeholder:  #b4b4be;
   --tool-text:    #33333b;
+  --good:         #1f8a70;
 }
 
 /* Auto: follow the OS when it reports a light preference */
@@ -53,6 +55,7 @@ html[data-theme="light"] {
     --panel-hover:  #d0d0d8;
     --placeholder:  #b4b4be;
     --tool-text:    #33333b;
+    --good:         #1f8a70;
   }
 }
 
@@ -66,13 +69,11 @@ html, body {
   transition: background-color .2s ease, color .2s ease;
 }
 
-/* generous left/right margin so the border (and the circles straddling it) clears the viewport edge.
-   width:100% (not 100vw) + overflow:hidden prevents the right side spilling off-screen on small windows. */
-/* three stacked regions: header / canvas / toolbar — the canvas is the only drop zone */
+/* shell: header on top, then three columns (gates / canvas / challenge+table) */
 #app {
   position: relative;
   width: 100%; height: 100%;
-  padding: 16px 48px;
+  padding: 14px 18px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -82,113 +83,122 @@ html, body {
 #topbar {
   flex: 0 0 auto;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
-.topbar-left  { display: flex; flex-direction: column; gap: 8px; }
-.topbar-right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
 
-/* show/hide switch */
-.switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
-.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
-.switch .track {
-  position: relative;
-  width: 38px; height: 20px;
-  background: var(--panel-hover);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  transition: background-color .15s ease;
-}
-.switch .thumb {
-  position: absolute; top: 2px; left: 2px;
-  width: 14px; height: 14px;
-  background: var(--muted);
-  border-radius: 50%;
-  transition: transform .15s ease, background-color .15s ease;
-}
-.switch input:checked + .track { background: var(--hot); border-color: var(--hot); }
-.switch input:checked + .track .thumb { transform: translateX(18px); background: #fff; }
-.switch input:focus-visible + .track { outline: 2px solid var(--hot); outline-offset: 2px; }
-.switch-label { font-size: 12px; font-weight: 600; color: var(--muted); }
-
-/* truth table panel (top-right of the canvas) */
-#truth {
-  position: absolute;
-  top: 14px; right: 14px;
-  z-index: 6;
-  max-height: calc(100% - 28px);
-  overflow: auto;
-  background: var(--canvas);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0,0,0,.25);
-}
-#truth[hidden] { display: none; }
-#truth table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
-#truth th, #truth td {
-  border: 1px solid var(--border);
-  padding: 6px 16px;
-  text-align: center;
-  font-size: 20px;
-  font-weight: 700;
-}
-#truth th { color: var(--text); font-size: 18px; background: var(--panel); }
-#truth td.v0 { color: #3f86d6; }   /* 0 = blue  */
-#truth td.v1 { color: var(--wire-on); }  /* 1 = red */
-#truth .tt-note { padding: 10px 14px; font-size: 12px; font-weight: 600; color: var(--muted); }
-
-#canvas {
+#main {
   flex: 1 1 auto;
-  min-height: 0;            /* allow the flex item to shrink instead of overflowing */
-  position: relative;
-  background: var(--canvas);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  /* visible so input/output circles can straddle the border line, like gate ports */
-  overflow: visible;
+  min-height: 0;
+  display: flex;
+  gap: 30px;            /* gutter so io circles can straddle the canvas edges */
 }
 
-/* title */
-#title {
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text);
-  font-size: 38px;
-  font-weight: 700;
-  width: 480px;
-  max-width: 60vw;
-  caret-color: var(--hot);
+/* ---- columns ---------------------------------------------------------- */
+#sidebar-left {
+  flex: 0 0 188px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow: auto;
 }
-#title::placeholder { color: var(--placeholder); font-weight: 600; }
+#sidebar-right {
+  flex: 0 0 292px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.side-sec { display: flex; flex-direction: column; gap: 8px; }
+.side-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+#reset-btn { margin-top: auto; }   /* stays pinned to the bottom even if the truth table is hidden */
+
+.side-btn {
+  background: var(--panel);
+  color: var(--tool-text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 10px;
+  cursor: pointer;
+  text-align: center;
+}
+.side-btn:hover { background: var(--panel-hover); color: var(--text); }
+.side-btn.danger { background: transparent; color: var(--muted); }
+.side-btn.danger:hover { color: var(--hot); border-color: var(--hot); background: transparent; }
+
+/* gate palette (vertical, draggable onto the canvas) */
+#gate-list { display: flex; flex-direction: column; gap: 3px; }
+.tool.palette {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  color: var(--tool-text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: grab;
+}
+.tool.palette:hover { background: var(--panel); color: var(--text); }
+.tool.palette .sw {
+  display: inline-block;
+  width: 11px; height: 11px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
 
 /* input / output group controls */
 #io-controls {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.io-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .5px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-right: 2px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
 }
 #io-controls button {
   background: var(--panel);
   color: var(--muted);
   border: 1px solid var(--border);
   border-radius: 4px;
-  font-size: 11px;
-  padding: 3px 7px;
+  font-size: 12px;
+  padding: 5px 7px;
   cursor: pointer;
 }
 #io-controls button:hover { color: var(--text); border-color: var(--wire-off); }
 
-/* theme switch (segmented control), top-right of the header */
+/* app title (static, in the header) */
+#app-title {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--text);
+}
+
+/* gate-name field (left column, above Create) */
+#title {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  outline: none;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 7px 10px;
+  caret-color: var(--hot);
+}
+#title:focus { border-color: var(--hot); }
+#title::placeholder { color: var(--placeholder); font-weight: 500; }
+
+/* theme switch (segmented control) */
 #theme-bar {
   flex: 0 0 auto;
   display: inline-flex;
@@ -209,9 +219,18 @@ html, body {
   cursor: pointer;
 }
 #theme-bar button:hover { color: var(--text); }
-#theme-bar button.active {
-  background: var(--panel-hover);
-  color: var(--text);
+#theme-bar button.active { background: var(--panel-hover); color: var(--text); }
+
+/* ---- canvas ----------------------------------------------------------- */
+#canvas {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  /* visible so input/output circles can straddle the border line, like gate ports */
+  overflow: visible;
 }
 
 /* svg wire layer sits below the interactive nodes */
@@ -320,40 +339,100 @@ html, body {
 .io.in { cursor: pointer; }
 .io.on { background: var(--wire-on); box-shadow: 0 0 8px rgba(226,48,48,.6); }
 
-/* bottom toolbar / palette */
-#toolbar {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 17px;
-}
-.tool {
-  cursor: pointer;
-  color: var(--text);
-}
-.tool.create {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 3px 10px;
-  font-weight: 600;
-}
-.tool.create:hover { background: var(--panel-hover); }
-.tool.palette { cursor: grab; color: var(--tool-text); }
-.tool.palette:hover { color: var(--text); }   /* theme-aware: was hardcoded #fff (invisible in light) */
-.tool.palette .sw {
-  display: inline-block;
-  width: 9px; height: 9px;
-  border-radius: 2px;
-  margin-right: 5px;
-  vertical-align: middle;
-}
-
 /* ghost gate while dragging from palette */
 .ghost {
   position: fixed;
   z-index: 999;
   pointer-events: none;
   opacity: .85;
+}
+
+/* ---- challenges (right column, top) ----------------------------------- */
+#challenges { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; }
+#ch-list { display: flex; flex-direction: column; }
+.ch-row {
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+}
+.ch-row.active {
+  background: var(--canvas);
+  border-color: var(--border);
+  padding-bottom: 10px;
+}
+.ch-row.locked { opacity: .45; }
+.ch-row.done   { opacity: .8; }
+.ch-row-top { display: flex; align-items: center; gap: 8px; }
+.ch-status { width: 15px; text-align: center; font-size: 14px; color: var(--muted); }
+.ch-row.done   .ch-status { color: var(--good); }
+.ch-row.active .ch-status { color: var(--text); }
+.ch-name { flex: 1 1 auto; font-size: 15px; font-weight: 700; color: var(--text); }
+.ch-row.locked .ch-name, .ch-row.done .ch-name { font-weight: 600; }
+.ch-actions { flex: 0 0 auto; display: inline-flex; gap: 5px; }
+.ch-check, .ch-setup {
+  background: var(--panel); color: var(--tool-text);
+  border: 1px solid var(--border); border-radius: 5px;
+  font-size: 12px; font-weight: 600; padding: 4px 11px; cursor: pointer;
+}
+.ch-check:hover, .ch-setup:hover { background: var(--panel-hover); color: var(--text); }
+.ch-setup { color: var(--muted); }
+.ch-hint { margin: 6px 0 0 23px; font-size: 12px; line-height: 1.4; color: var(--muted); }
+.ch-msg  { margin: 7px 0 0 23px; font-size: 12px; font-weight: 600; line-height: 1.4; }
+.ch-msg.ok  { color: var(--good); }
+.ch-msg.err { color: var(--hot); }
+
+/* ---- truth table (right column, fills remaining height) --------------- */
+#truth-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#truth {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+#truth table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+#truth th, #truth td {
+  border: 1px solid var(--border);
+  padding: 5px 10px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+}
+#truth th { color: var(--text); font-size: 14px; background: var(--panel); position: sticky; top: 0; }
+#truth td.v0 { color: #3f86d6; }          /* 0 = blue */
+#truth td.v1 { color: var(--wire-on); }   /* 1 = red  */
+#truth .tt-note { padding: 12px 14px; font-size: 12px; font-weight: 600; color: var(--muted); }
+
+/* challenge-diff status strip + mismatched cells */
+#truth .tt-bar {
+  position: sticky; top: 0; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 6px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 700; color: var(--muted);
+}
+#truth .tt-bar.ok { color: var(--good); }
+#truth .tt-bar button {
+  flex: 0 0 auto;
+  background: var(--panel-hover); color: var(--tool-text);
+  border: 1px solid var(--border); border-radius: 4px;
+  font-size: 11px; font-weight: 600; padding: 2px 8px; cursor: pointer;
+}
+#truth .tt-bar button:hover { color: var(--text); }
+#truth td.tt-bad {
+  background: rgba(226,48,48,.18);
+  outline: 1px solid var(--hot); outline-offset: -1px;
+}
+#truth td.tt-bad .tt-want {
+  margin-left: 3px;
+  font-size: 11px; font-weight: 700;
+  color: var(--hot); vertical-align: sub;
 }
