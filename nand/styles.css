@@ -119,7 +119,7 @@ html, body {
   text-transform: uppercase;
   color: var(--muted);
 }
-.side-spacer { flex: 1 1 auto; }
+#reset-btn { margin-top: 4px; }
 
 .side-btn {
   background: var(--panel);
@@ -174,19 +174,29 @@ html, body {
 }
 #io-controls button:hover { color: var(--text); border-color: var(--wire-off); }
 
-/* title (in the header) */
-#title {
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text);
+/* app title (static, in the header) */
+#app-title {
   font-size: 30px;
   font-weight: 700;
-  flex: 1 1 auto;
-  min-width: 0;
+  letter-spacing: .5px;
+  color: var(--text);
+}
+
+/* gate-name field (left column, above Create) */
+#title {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  outline: none;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 7px 10px;
   caret-color: var(--hot);
 }
-#title::placeholder { color: var(--placeholder); font-weight: 600; }
+#title:focus { border-color: var(--hot); }
+#title::placeholder { color: var(--placeholder); font-weight: 500; }
 
 /* theme switch (segmented control) */
 #theme-bar {
@@ -358,13 +368,14 @@ html, body {
 .ch-row.active .ch-status { color: var(--text); }
 .ch-name { flex: 1 1 auto; font-size: 15px; font-weight: 700; color: var(--text); }
 .ch-row.locked .ch-name, .ch-row.done .ch-name { font-weight: 600; }
-.ch-check {
-  flex: 0 0 auto;
+.ch-actions { flex: 0 0 auto; display: inline-flex; gap: 5px; }
+.ch-check, .ch-setup {
   background: var(--panel); color: var(--tool-text);
   border: 1px solid var(--border); border-radius: 5px;
   font-size: 12px; font-weight: 600; padding: 4px 11px; cursor: pointer;
 }
-.ch-check:hover { background: var(--panel-hover); color: var(--text); }
+.ch-check:hover, .ch-setup:hover { background: var(--panel-hover); color: var(--text); }
+.ch-setup { color: var(--muted); }
 .ch-hint { margin: 6px 0 0 23px; font-size: 12px; line-height: 1.4; color: var(--muted); }
 .ch-msg  { margin: 7px 0 0 23px; font-size: 12px; font-weight: 600; line-height: 1.4; }
 .ch-msg.ok  { color: var(--good); }

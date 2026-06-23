@@ -65,22 +65,66 @@
   // given the input bits (top-to-bottom = bits[0..n]), it returns the expected
   // output bits. "Check" runs every input combination through the canvas and,
   // if it matches, snapshots the canvas into a reusable gate of that name.
+  // Each challenge is fully declarative:
+  //   io    - named inputs/outputs; bit-counts derive from these arrays.
+  //           "Set up" applies this interface to the canvas.
+  //   table - the target truth table: one row per input combination, in
+  //           canonical order (first input is most-significant, so rows go
+  //           00..11 / 000..111). Each row lists the expected output bits,
+  //           aligned to io.outputs.
   var SCENARIOS = [
-    { name: 'NAND', inputs: 2, outputs: 1, hint: 'NOT (A AND B) — true unless both inputs are on.',
-      fn: function (b) { return [ (b[0] && b[1]) ? 0 : 1 ]; } },
-    { name: 'OR',   inputs: 2, outputs: 1, hint: 'A OR B — De Morgan: NOT(NOT A AND NOT B).',
-      fn: function (b) { return [ (b[0] || b[1]) ? 1 : 0 ]; } },
-    { name: 'XOR',  inputs: 2, outputs: 1, hint: 'A XOR B — on only when the inputs differ.',
-      fn: function (b) { return [ (b[0] !== b[1]) ? 1 : 0 ]; } },
-    { name: 'ADDER', inputs: 3, outputs: 2, outNames: ['SUM', 'Carry'],
-      hint: '1-bit full adder. Inputs A, B, C (carry-in). Top output = SUM (A⊕B⊕C), bottom = Carry-out.',
-      fn: function (b) {
-        var a = b[0], bb = b[1], c = b[2];
-        var sum  = a ^ bb ^ c;                 // 1 when an odd number of inputs are on
-        var cout = (a & bb) | (a & c) | (bb & c); // majority of the three inputs
-        return [ sum ? 1 : 0, cout ? 1 : 0 ];
-      } }
+    {
+      name: 'NAND',
+      io: { inputs: ['A', 'B'], outputs: ['Out'] },
+      hint: 'NOT (A AND B) — true unless both inputs are on.',
+      //       A B -> Out
+      table: [ [1],   // 0 0
+               [1],   // 0 1
+               [1],   // 1 0
+               [0] ]  // 1 1
+    },
+    {
+      name: 'OR',
+      io: { inputs: ['A', 'B'], outputs: ['Out'] },
+      hint: 'A OR B — De Morgan: NOT(NOT A AND NOT B).',
+      //       A B -> Out
+      table: [ [0],   // 0 0
+               [1],   // 0 1
+               [1],   // 1 0
+               [1] ]  // 1 1
+    },
+    {
+      name: 'XOR',
+      io: { inputs: ['A', 'B'], outputs: ['Out'] },
+      hint: 'A XOR B — on only when the inputs differ.',
+      //       A B -> Out
+      table: [ [0],   // 0 0
+               [1],   // 0 1
+               [1],   // 1 0
+               [0] ]  // 1 1
+    },
+    {
+      name: 'ADDER',
+      io: { inputs: ['A', 'B', 'Carry'], outputs: ['Sum', 'Carry'] },
+      hint: '1-bit full adder. Inputs A, B, Carry (carry-in). Sum = A⊕B⊕Carry, Carry-out = majority(A, B, Carry).',
+      //       A B Carry -> Sum Carry
+      table: [ [0, 0],   // 0 0 0
+               [1, 0],   // 0 0 1
+               [1, 0],   // 0 1 0
+               [0, 1],   // 0 1 1
+               [1, 0],   // 1 0 0
+               [0, 1],   // 1 0 1
+               [0, 1],   // 1 1 0
+               [1, 1] ]  // 1 1 1
+    }
   ];
+
+  // expected output row for an input combination (first input = most-significant)
+  function targetRow(sc, combo) {
+    var idx = 0;
+    for (var i = 0; i < combo.length; i++) idx = (idx << 1) | (combo[i] ? 1 : 0);
+    return sc.table[idx] || [];
+  }
   var chMsg = {};             // scenario name -> { ok, text } feedback shown in the panel
 
   // ---- DOM refs -------------------------------------------------------------
@@ -641,24 +685,24 @@
     var sc = SCENARIOS[idx];
 
     var bits = function (n) { return n + ' ' + (n === 1 ? 'bit' : 'bits'); };
+    var nIn = sc.io.inputs.length, nOut = sc.io.outputs.length;
     var fin = flatInputs(), fout = flatOutputs();
     if (state.gates.length === 0)
       return chFeedback(name, false, 'Add and wire some gates first.');
-    if (fin.length !== sc.inputs)
-      return chFeedback(name, false, 'Needs exactly ' + bits(sc.inputs) + ' of input (you have ' + fin.length + ').');
-    if (fout.length !== sc.outputs)
-      return chFeedback(name, false, 'Needs exactly ' + bits(sc.outputs) + ' of output (you have ' + fout.length + ').');
+    if (fin.length !== nIn)
+      return chFeedback(name, false, 'Needs exactly ' + bits(nIn) + ' of input (you have ' + fin.length + ').');
+    if (fout.length !== nOut)
+      return chFeedback(name, false, 'Needs exactly ' + bits(nOut) + ' of output (you have ' + fout.length + ').');
 
-    var total = Math.pow(2, sc.inputs);
+    var total = Math.pow(2, nIn);
     for (var m = 0; m < total; m++) {
       var combo = [];
-      for (var i = 0; i < sc.inputs; i++) combo.push((m >> (sc.inputs - 1 - i)) & 1);   // first input = MSB
+      for (var i = 0; i < nIn; i++) combo.push((m >> (nIn - 1 - i)) & 1);   // first input = MSB
       var got  = evaluateCircuit(circuitOf(), combo).outputs;
-      var want = sc.fn(combo);
-      for (var j = 0; j < sc.outputs; j++) {
+      var want = targetRow(sc, combo);
+      for (var j = 0; j < nOut; j++) {
         if ((got[j] ? 1 : 0) !== (want[j] ? 1 : 0)) {
-          var label = (sc.outNames && sc.outNames[j]) ? sc.outNames[j]
-                    : (sc.outputs > 1 ? 'output #' + (j + 1) : 'output');
+          var label = sc.io.outputs[j] || ('output #' + (j + 1));
           return chFeedback(name, false,
             'Not yet — for inputs ' + combo.join(', ') + ', ' + label +
             ' gives ' + (got[j] ? 1 : 0) + ', expected ' + (want[j] ? 1 : 0) + '.');
@@ -673,7 +717,35 @@
     state = freshState();
     selected = null;
     renderToolbar();
-    render();   // also refreshes the open challenges panel
+    render();             // refresh challenges/table
+    autoSetupActive();    // and configure the canvas for the next challenge
+  }
+
+  // apply a challenge's declared interface to the canvas (named input/output
+  // groups). gates are kept; wires tied to the replaced I/O are dropped.
+  function setupChallengeIO(name) {
+    var i = indexOfScenario(name);
+    if (i < 0 || !isUnlocked(i) || isSolved(name)) return;   // only the active challenge
+    var sc = SCENARIOS[i];
+    var oldIo = flatInputs().concat(flatOutputs()).map(function (m) { return m.id; });
+    state.inputs  = sc.io.inputs.map(function (nm) { return newInputGroup(nm); });
+    state.outputs = sc.io.outputs.map(function (nm) { return newOutputGroup(nm); });
+    state.wires = state.wires.filter(function (w) {
+      return oldIo.indexOf(w.from.owner) < 0 && oldIo.indexOf(w.to.owner) < 0;
+    });
+    chMsg[name] = null;
+    render();
+  }
+
+  // match the canvas to the active challenge automatically — called when the
+  // active challenge changes (boot / after a solve / after reset). only acts
+  // when the shape doesn't already fit, so a canvas in progress is left alone.
+  function autoSetupActive() {
+    var sc = activeChallenge();
+    if (!sc) return;
+    if (flatInputs().length === sc.io.inputs.length &&
+        flatOutputs().length === sc.io.outputs.length) return;
+    setupChallengeIO(sc.name);   // re-renders
   }
 
   // wipe custom gates + progress, leaving only the AND / NOT primitives
@@ -688,6 +760,7 @@
     selected = null;
     renderToolbar();
     render();
+    autoSetupActive();
   }
 
   // compact checklist; the active row (first unlocked, unsolved) is expanded
@@ -699,15 +772,22 @@
       var active = unlocked && !done;                 // sequential -> at most one active
       var cls = done ? 'done' : (active ? 'active' : 'locked');
       var status = done ? '✓' : (active ? '○' : '🔒');
-      var action = done
-        ? '<button class="ch-check" data-check="' + sc.name + '">Rebuild</button>'
-        : (active ? '<button class="ch-check" data-check="' + sc.name + '">Check</button>' : '');
+      // offer "Set up" when the canvas I/O shape doesn't match the challenge yet
+      var needsSetup = active &&
+        (flatInputs().length !== sc.io.inputs.length || flatOutputs().length !== sc.io.outputs.length);
+      var action = '';
+      if (done) {
+        action = '<button class="ch-check" data-check="' + sc.name + '">Rebuild</button>';
+      } else if (active) {
+        action = (needsSetup ? '<button class="ch-setup" data-setup="' + sc.name + '">Set up</button>' : '') +
+                 '<button class="ch-check" data-check="' + sc.name + '">Check</button>';
+      }
       var msg = chMsg[sc.name];
       return '<div class="ch-row ' + cls + '">' +
                '<div class="ch-row-top">' +
                  '<span class="ch-status">' + status + '</span>' +
                  '<span class="ch-name">' + esc(sc.name) + '</span>' +
-                 action +
+                 (action ? '<span class="ch-actions">' + action + '</span>' : '') +
                '</div>' +
                (active ? '<div class="ch-hint">' + esc(sc.hint) + '</div>' : '') +
                (active && msg ? '<div class="ch-msg ' + (msg.ok ? 'ok' : 'err') + '">' + esc(msg.text) + '</div>' : '') +
@@ -717,7 +797,9 @@
 
   chListEl.addEventListener('click', function (e) {
     var c = e.target.closest('[data-check]');
-    if (c) checkScenario(c.getAttribute('data-check'));
+    if (c) { checkScenario(c.getAttribute('data-check')); return; }
+    var s = e.target.closest('[data-setup]');
+    if (s) setupChallengeIO(s.getAttribute('data-setup'));
   });
 
   // ===========================================================================
@@ -763,7 +845,7 @@
     // diff against the active challenge: compare each output bit to its target.
     var sc = activeChallenge();
     var nOut = flatOutputs().length;
-    var fits = sc && sc.inputs === n && sc.outputs === nOut;   // shapes line up -> can compare
+    var fits = sc && sc.io.inputs.length === n && sc.io.outputs.length === nOut;   // shapes line up -> can compare
     var comparing = !!fits && !compareOff;
 
     var cols = memberCols(state.inputs).concat(memberCols(state.outputs));
@@ -775,7 +857,7 @@
       var combo = [];
       for (var i = 0; i < n; i++) combo.push((m >> (n - 1 - i)) & 1);   // first input bit = most-significant
       var outs = evaluateCircuit(circuitOf(), combo).outputs;
-      var want = comparing ? sc.fn(combo) : null;
+      var want = comparing ? targetRow(sc, combo) : null;
       var rowOk = true;
       var outCells = '';
       for (var j = 0; j < outs.length; j++) {
@@ -815,8 +897,9 @@
              '</div>';
     }
     // unlocked challenge but the canvas shape doesn't match yet
-    var needIn  = sc.inputs  + ' input'  + (sc.inputs  === 1 ? '' : 's');
-    var needOut = sc.outputs + ' output' + (sc.outputs === 1 ? '' : 's');
+    var nIn = sc.io.inputs.length, no = sc.io.outputs.length;
+    var needIn  = nIn + ' input'  + (nIn === 1 ? '' : 's');
+    var needOut = no  + ' output' + (no  === 1 ? '' : 's');
     return '<div class="tt-bar">' +
              '<span>For ' + esc(sc.name) + ', use ' + needIn + ' &amp; ' + needOut +
              ' (you have ' + n + ' / ' + nOut + ').</span>' +
@@ -866,6 +949,7 @@
   restore();
   renderToolbar();
   render();
+  autoSetupActive();   // configure the canvas for whichever challenge is active on load
 
   // Re-render whenever the canvas is actually sized. A ResizeObserver fires
   // once right after the first layout (fixing a stale first-paint size) and on
