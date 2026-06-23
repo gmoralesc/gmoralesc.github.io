@@ -138,6 +138,33 @@ html, body {
 #truth td.v1 { color: var(--wire-on); }  /* 1 = red */
 #truth .tt-note { padding: 10px 14px; font-size: 12px; font-weight: 600; color: var(--muted); }
 
+/* challenge-diff status strip + mismatched cells */
+#truth .tt-bar {
+  position: sticky; top: 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 6px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 700; color: var(--muted);
+}
+#truth .tt-bar.ok { color: #1f8a70; }
+#truth .tt-bar button {
+  flex: 0 0 auto;
+  background: var(--panel-hover); color: var(--tool-text);
+  border: 1px solid var(--border); border-radius: 4px;
+  font-size: 11px; font-weight: 600; padding: 2px 8px; cursor: pointer;
+}
+#truth .tt-bar button:hover { color: var(--text); }
+#truth td.tt-bad {
+  background: rgba(226,48,48,.18);
+  outline: 1px solid var(--hot); outline-offset: -1px;
+}
+#truth td.tt-bad .tt-want {
+  margin-left: 3px;
+  font-size: 11px; font-weight: 700;
+  color: var(--hot); vertical-align: sub;
+}
+
 #canvas {
   flex: 1 1 auto;
   min-height: 0;            /* allow the flex item to shrink instead of overflowing */
@@ -357,3 +384,83 @@ html, body {
   pointer-events: none;
   opacity: .85;
 }
+
+/* ---- challenges -------------------------------------------------------- */
+/* toggle button in the header */
+.ch-toggle {
+  background: var(--panel);
+  color: var(--tool-text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.ch-toggle:hover { color: var(--text); border-color: var(--wire-off); }
+.ch-toggle.active { background: var(--hot); border-color: var(--hot); color: #fff; }
+
+/* panel (top-left of the canvas, mirrors the truth table on the right) */
+#challenges {
+  position: absolute;
+  top: 14px; left: 14px;
+  z-index: 7;
+  width: 272px;
+  max-height: calc(100% - 28px);
+  overflow: auto;
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+}
+#challenges[hidden] { display: none; }
+
+.ch-head {
+  position: sticky; top: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; color: var(--muted);
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.ch-close {
+  background: transparent; border: none;
+  color: var(--muted); font-size: 18px; line-height: 1;
+  padding: 0 2px; cursor: pointer;
+}
+.ch-close:hover { color: var(--text); }
+
+#ch-list { padding: 4px 6px; }
+.ch-row { padding: 9px 6px 11px; }
+.ch-row + .ch-row { border-top: 1px solid var(--border); }
+.ch-row-top { display: flex; align-items: center; gap: 8px; }
+.ch-status { width: 14px; text-align: center; font-size: 14px; color: var(--muted); }
+.ch-row.done .ch-status { color: #1f8a70; }
+.ch-row.locked { opacity: .5; }
+.ch-row.locked .ch-hint { font-style: italic; }
+.ch-lock-tag {
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .4px;
+  color: var(--muted);
+}
+.ch-name { flex: 1 1 auto; font-size: 15px; font-weight: 700; color: var(--text); }
+.ch-hint { margin: 5px 0 0 22px; font-size: 12px; line-height: 1.4; color: var(--muted); }
+.ch-check {
+  background: var(--panel); color: var(--tool-text);
+  border: 1px solid var(--border); border-radius: 5px;
+  font-size: 12px; font-weight: 600; padding: 4px 11px; cursor: pointer;
+}
+.ch-check:hover { background: var(--panel-hover); color: var(--text); }
+.ch-msg { margin: 7px 0 0 22px; font-size: 12px; font-weight: 600; line-height: 1.4; }
+.ch-msg.ok  { color: #1f8a70; }
+.ch-msg.err { color: var(--hot); }
+
+.ch-foot { padding: 10px 12px; border-top: 1px solid var(--border); }
+.ch-reset {
+  width: 100%;
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 12px; font-weight: 600; padding: 7px 10px; cursor: pointer;
+}
+.ch-reset:hover { color: var(--hot); border-color: var(--hot); }

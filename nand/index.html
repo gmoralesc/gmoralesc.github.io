@@ -21,6 +21,8 @@
       </div>
 
       <div class="topbar-right">
+        <button id="ch-toggle" class="ch-toggle" title="Build-a-gate challenges">Challenges</button>
+
         <div id="theme-bar" role="group" aria-label="Theme">
           <button data-theme-opt="system" title="Match system theme">Auto</button>
           <button data-theme-opt="light"  title="Light theme">Light</button>
@@ -39,6 +41,18 @@
       <svg id="wires"></svg>
       <div id="nodes"></div>
       <div id="truth" hidden></div>
+
+      <aside id="challenges" hidden>
+        <div class="ch-head">
+          <span>Challenges</span>
+          <button class="ch-close" data-ch="close" title="Close">×</button>
+        </div>
+        <div id="ch-list"></div>
+        <div class="ch-foot">
+          <button class="ch-reset" data-ch="reset"
+                  title="Delete all custom gates and progress, keeping only AND and NOT">Reset to AND / NOT</button>
+        </div>
+      </aside>
     </div>
 
     <footer id="toolbar"></footer>

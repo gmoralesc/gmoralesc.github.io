@@ -59,6 +59,30 @@
   var state = freshState();   // call only after uid + nextId are initialized
   var selected = null;        // id of selected gate
 
+  // ---- challenges -----------------------------------------------------------
+  // Each scenario asks the user to build a gate from the primitives (and any
+  // gates they've already created). `fn(bits)` is the target truth table:
+  // given the input bits (top-to-bottom = bits[0..n]), it returns the expected
+  // output bits. "Check" runs every input combination through the canvas and,
+  // if it matches, snapshots the canvas into a reusable gate of that name.
+  var SCENARIOS = [
+    { name: 'NAND', inputs: 2, outputs: 1, hint: 'NOT (A AND B) — true unless both inputs are on.',
+      fn: function (b) { return [ (b[0] && b[1]) ? 0 : 1 ]; } },
+    { name: 'OR',   inputs: 2, outputs: 1, hint: 'A OR B — De Morgan: NOT(NOT A AND NOT B).',
+      fn: function (b) { return [ (b[0] || b[1]) ? 1 : 0 ]; } },
+    { name: 'XOR',  inputs: 2, outputs: 1, hint: 'A XOR B — on only when the inputs differ.',
+      fn: function (b) { return [ (b[0] !== b[1]) ? 1 : 0 ]; } },
+    { name: 'ADDER', inputs: 3, outputs: 2, outNames: ['SUM', 'Carry'],
+      hint: '1-bit full adder. Inputs A, B, C (carry-in). Top output = SUM (A⊕B⊕C), bottom = Carry-out.',
+      fn: function (b) {
+        var a = b[0], bb = b[1], c = b[2];
+        var sum  = a ^ bb ^ c;                 // 1 when an odd number of inputs are on
+        var cout = (a & bb) | (a & c) | (bb & c); // majority of the three inputs
+        return [ sum ? 1 : 0, cout ? 1 : 0 ];
+      } }
+  ];
+  var chMsg = {};             // scenario name -> { ok, text } feedback shown in the panel
+
   // ---- DOM refs -------------------------------------------------------------
   var canvasEl  = document.getElementById('canvas');
   var svgEl     = document.getElementById('wires');
@@ -67,6 +91,9 @@
   var titleEl   = document.getElementById('title');
   var truthEl   = document.getElementById('truth');
   var ttToggle  = document.getElementById('tt-toggle');
+  var challengesEl = document.getElementById('challenges');
+  var chListEl     = document.getElementById('ch-list');
+  var chToggle     = document.getElementById('ch-toggle');
 
   // ===========================================================================
   //  SIMULATION
@@ -274,6 +301,7 @@
     nodesEl.innerHTML = html;
     titleEl.value = state.title;
     renderTruthTable();
+    if (!challengesEl.hidden) renderChallenges();
   }
 
   // editable group name, above the group's members
@@ -534,24 +562,16 @@
   // ===========================================================================
   //  CREATE GATE  (snapshot current canvas -> reusable definition)
   // ===========================================================================
-  function createGate() {
-    var name = state.title.trim().toUpperCase();
-    if (!name) { flashTitle(); return; }
-    if (library[name] && library[name].type === 'primitive') {
-      alert('"' + name + '" is a built-in gate name. Choose another.');
-      return;
-    }
-    if (state.gates.length === 0) { alert('Add and wire some gates first.'); return; }
-
+  // snapshot the current canvas into a reusable custom-gate definition.
+  // a created gate is a black box of bit-ports; groups don't carry into the definition.
+  function makeDef(name) {
     var L = layout();
     var sortByY = function (members, yMap) {
       return members.slice().sort(function (a, b) { return yMap[a.id] - yMap[b.id]; });
     };
-    // a created gate is a black box of bit-ports; groups don't carry into the definition
     var inputs  = sortByY(flatInputs(),  L.inputY ).map(function (m) { return { id: m.id }; });
     var outputs = sortByY(flatOutputs(), L.outputY).map(function (m) { return { id: m.id }; });
-
-    var def = {
+    return {
       name: name,
       type: 'custom',
       color: COLORS[customCount() % COLORS.length],
@@ -564,8 +584,18 @@
         wires:   state.wires.map(function (w) { return { from: w.from, to: w.to }; })
       }
     };
+  }
 
-    library[name] = def;
+  function createGate() {
+    var name = state.title.trim().toUpperCase();
+    if (!name) { flashTitle(); return; }
+    if (library[name] && library[name].type === 'primitive') {
+      alert('"' + name + '" is a built-in gate name. Choose another.');
+      return;
+    }
+    if (state.gates.length === 0) { alert('Add and wire some gates first.'); return; }
+
+    library[name] = makeDef(name);
     persist();
     state = freshState();
     selected = null;
@@ -582,6 +612,127 @@
     titleEl.style.color = 'var(--hot)';
     setTimeout(function () { titleEl.style.color = ''; }, 250);
   }
+
+  // ===========================================================================
+  //  CHALLENGES  (build a target gate from the primitives, verify, then keep it)
+  // ===========================================================================
+  // a scenario is "solved" once a custom gate of that name exists in the library
+  function isSolved(name) { return !!(library[name] && library[name].type === 'custom'); }
+  // a scenario unlocks only after every earlier scenario is solved
+  function isUnlocked(i) {
+    for (var k = 0; k < i; k++) if (!isSolved(SCENARIOS[k].name)) return false;
+    return true;
+  }
+  function indexOfScenario(name) {
+    for (var i = 0; i < SCENARIOS.length; i++) if (SCENARIOS[i].name === name) return i;
+    return -1;
+  }
+  // the challenge currently being worked on: first unlocked-but-unsolved scenario
+  function activeChallenge() {
+    for (var i = 0; i < SCENARIOS.length; i++)
+      if (isUnlocked(i) && !isSolved(SCENARIOS[i].name)) return SCENARIOS[i];
+    return null;
+  }
+  var compareOff = false;   // session toggle: show the plain truth table instead of the diff
+
+  function chFeedback(name, ok, text) { chMsg[name] = { ok: ok, text: text }; renderChallenges(); }
+
+  // run every input combination through the canvas and compare to the target;
+  // on a full match, snapshot the canvas as a reusable gate of the scenario's name.
+  function checkScenario(name) {
+    var idx = indexOfScenario(name);
+    if (idx < 0 || !isUnlocked(idx)) return;   // ignore locked / unknown
+    var sc = SCENARIOS[idx];
+
+    var bits = function (n) { return n + ' ' + (n === 1 ? 'bit' : 'bits'); };
+    var fin = flatInputs(), fout = flatOutputs();
+    if (state.gates.length === 0)
+      return chFeedback(name, false, 'Add and wire some gates first.');
+    if (fin.length !== sc.inputs)
+      return chFeedback(name, false, 'Needs exactly ' + bits(sc.inputs) + ' of input (you have ' + fin.length + ').');
+    if (fout.length !== sc.outputs)
+      return chFeedback(name, false, 'Needs exactly ' + bits(sc.outputs) + ' of output (you have ' + fout.length + ').');
+
+    var total = Math.pow(2, sc.inputs);
+    for (var m = 0; m < total; m++) {
+      var combo = [];
+      for (var i = 0; i < sc.inputs; i++) combo.push((m >> (sc.inputs - 1 - i)) & 1);   // first input = MSB
+      var got  = evaluateCircuit(circuitOf(), combo).outputs;
+      var want = sc.fn(combo);
+      for (var j = 0; j < sc.outputs; j++) {
+        if ((got[j] ? 1 : 0) !== (want[j] ? 1 : 0)) {
+          var label = (sc.outNames && sc.outNames[j]) ? sc.outNames[j]
+                    : (sc.outputs > 1 ? 'output #' + (j + 1) : 'output');
+          return chFeedback(name, false,
+            'Not yet — for inputs ' + combo.join(', ') + ', ' + label +
+            ' gives ' + (got[j] ? 1 : 0) + ', expected ' + (want[j] ? 1 : 0) + '.');
+        }
+      }
+    }
+
+    // passed: store the gate, clear the canvas for the next build
+    library[name] = makeDef(name);
+    persist();
+    chMsg[name] = { ok: true, text: 'Solved! ' + name + ' is now in your palette.' };
+    state = freshState();
+    selected = null;
+    renderToolbar();
+    render();   // also refreshes the open challenges panel
+  }
+
+  // wipe custom gates + progress, leaving only the AND / NOT primitives
+  function resetProgress() {
+    if (!window.confirm('Delete all custom gates and challenge progress? AND and NOT will remain.')) return;
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    Object.keys(library).forEach(function (k) {
+      if (library[k].type !== 'primitive') delete library[k];
+    });
+    chMsg = {};
+    state = freshState();
+    selected = null;
+    renderToolbar();
+    render();
+  }
+
+  function renderChallenges() {
+    chListEl.innerHTML = SCENARIOS.map(function (sc, i) {
+      var done = isSolved(sc.name);
+      var unlocked = isUnlocked(i);
+      var msg  = chMsg[sc.name];
+      var status = done ? '✓' : (unlocked ? '○' : '🔒');
+      var action = unlocked
+        ? '<button class="ch-check" data-check="' + sc.name + '">' + (done ? 'Rebuild' : 'Check') + '</button>'
+        : '<span class="ch-lock-tag">Locked</span>';
+      var hint = unlocked
+        ? esc(sc.hint)
+        : 'Complete ' + esc(SCENARIOS[i - 1].name) + ' to unlock.';
+      return '<div class="ch-row' + (done ? ' done' : '') + (unlocked ? '' : ' locked') + '">' +
+               '<div class="ch-row-top">' +
+                 '<span class="ch-status">' + status + '</span>' +
+                 '<span class="ch-name">' + esc(sc.name) + '</span>' +
+                 action +
+               '</div>' +
+               '<div class="ch-hint">' + hint + '</div>' +
+               (unlocked && msg ? '<div class="ch-msg ' + (msg.ok ? 'ok' : 'err') + '">' + esc(msg.text) + '</div>' : '') +
+             '</div>';
+    }).join('');
+  }
+
+  function toggleChallenges(on) {
+    challengesEl.hidden = !on;
+    chToggle.classList.toggle('active', on);
+    if (on) renderChallenges();
+  }
+
+  chToggle.addEventListener('click', function () { toggleChallenges(challengesEl.hidden); });
+  challengesEl.addEventListener('click', function (e) {
+    var c = e.target.closest('[data-check]');
+    if (c) { checkScenario(c.getAttribute('data-check')); return; }
+    var a = e.target.closest('[data-ch]');
+    if (!a) return;
+    if (a.getAttribute('data-ch') === 'close') toggleChallenges(false);
+    if (a.getAttribute('data-ch') === 'reset') resetProgress();
+  });
 
   // ===========================================================================
   //  PERSISTENCE
@@ -625,20 +776,67 @@
       truthEl.innerHTML = '<div class="tt-note">Too many inputs to tabulate (max ' + TT_MAX_INPUTS + ' bits).</div>';
       return;
     }
+    // diff against the active challenge: compare each output bit to its target.
+    var sc = activeChallenge();
+    var nOut = flatOutputs().length;
+    var fits = sc && sc.inputs === n && sc.outputs === nOut;   // shapes line up -> can compare
+    var comparing = !!fits && !compareOff;
+
     var cols = memberCols(state.inputs).concat(memberCols(state.outputs));
     var head = '<tr>' + cols.map(function (name) { return '<th>' + esc(name) + '</th>'; }).join('') + '</tr>';
 
-    var body = '';
+    var body = '', matches = 0;
     var total = Math.pow(2, n);
     for (var m = 0; m < total; m++) {
       var combo = [];
       for (var i = 0; i < n; i++) combo.push((m >> (n - 1 - i)) & 1);   // first input bit = most-significant
       var outs = evaluateCircuit(circuitOf(), combo).outputs;
+      var want = comparing ? sc.fn(combo) : null;
+      var rowOk = true;
+      var outCells = '';
+      for (var j = 0; j < outs.length; j++) {
+        var v = outs[j] ? 1 : 0;
+        if (comparing && v !== (want[j] ? 1 : 0)) {
+          rowOk = false;
+          outCells += '<td class="v' + v + ' tt-bad" title="expected ' + (want[j] ? 1 : 0) + '">' +
+                      v + '<span class="tt-want">' + (want[j] ? 1 : 0) + '</span></td>';
+        } else {
+          outCells += '<td class="v' + v + '">' + v + '</td>';
+        }
+      }
+      if (comparing && rowOk) matches++;
       body += '<tr>' +
-        combo.map(function (v) { return '<td class="v' + v + '">' + v + '</td>'; }).join('') +
-        outs.map(function (v)  { return '<td class="v' + v + '">' + v + '</td>'; }).join('') + '</tr>';
+        combo.map(function (cv) { return '<td class="v' + cv + '">' + cv + '</td>'; }).join('') +
+        outCells + '</tr>';
     }
-    truthEl.innerHTML = '<table><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
+
+    truthEl.innerHTML = compareBar(sc, comparing, matches, total, n, nOut) +
+      '<table><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
+  }
+
+  // status strip above the table: live match count, shape hint, or a paused toggle
+  function compareBar(sc, comparing, matches, total, n, nOut) {
+    if (!sc) return '';
+    if (comparing) {
+      var ok = matches === total;
+      return '<div class="tt-bar' + (ok ? ' ok' : '') + '">' +
+               '<span>' + esc(sc.name) + ' &middot; ' + matches + ' / ' + total + (ok ? ' ✓' : '') + '</span>' +
+               '<button data-tt="cmp-off" title="Show the plain table">Plain</button>' +
+             '</div>';
+    }
+    if (compareOff) {
+      return '<div class="tt-bar">' +
+               '<span>Comparison paused</span>' +
+               '<button data-tt="cmp-on" title="Compare against ' + esc(sc.name) + '">Compare ' + esc(sc.name) + '</button>' +
+             '</div>';
+    }
+    // unlocked challenge but the canvas shape doesn't match yet
+    var needIn  = sc.inputs  + ' input'  + (sc.inputs  === 1 ? '' : 's');
+    var needOut = sc.outputs + ' output' + (sc.outputs === 1 ? '' : 's');
+    return '<div class="tt-bar">' +
+             '<span>For ' + esc(sc.name) + ', use ' + needIn + ' &amp; ' + needOut +
+             ' (you have ' + n + ' / ' + nOut + ').</span>' +
+           '</div>';
   }
 
   function applyTruthVisible(on) {
@@ -650,6 +848,14 @@
   ttToggle.addEventListener('change', function () {
     try { localStorage.setItem(TT_KEY, ttToggle.checked ? '1' : '0'); } catch (e) {}
     applyTruthVisible(ttToggle.checked);
+  });
+
+  // pause / resume the challenge diff inside the truth table
+  truthEl.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-tt]');
+    if (!b) return;
+    compareOff = b.getAttribute('data-tt') === 'cmp-off';
+    renderTruthTable();
   });
 
   function restoreTruth() {
