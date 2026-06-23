@@ -119,7 +119,7 @@ html, body {
   text-transform: uppercase;
   color: var(--muted);
 }
-#reset-btn { margin-top: 4px; }
+#reset-btn { margin-top: auto; }   /* stays pinned to the bottom even if the truth table is hidden */
 
 .side-btn {
   background: var(--panel);
