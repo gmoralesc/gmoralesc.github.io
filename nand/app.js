@@ -84,16 +84,15 @@
   var chMsg = {};             // scenario name -> { ok, text } feedback shown in the panel
 
   // ---- DOM refs -------------------------------------------------------------
-  var canvasEl  = document.getElementById('canvas');
-  var svgEl     = document.getElementById('wires');
-  var nodesEl   = document.getElementById('nodes');
-  var toolbarEl = document.getElementById('toolbar');
-  var titleEl   = document.getElementById('title');
-  var truthEl   = document.getElementById('truth');
-  var ttToggle  = document.getElementById('tt-toggle');
-  var challengesEl = document.getElementById('challenges');
-  var chListEl     = document.getElementById('ch-list');
-  var chToggle     = document.getElementById('ch-toggle');
+  var canvasEl   = document.getElementById('canvas');
+  var svgEl      = document.getElementById('wires');
+  var nodesEl    = document.getElementById('nodes');
+  var gateListEl = document.getElementById('gate-list');
+  var createBtn  = document.getElementById('create-btn');
+  var resetBtn   = document.getElementById('reset-btn');
+  var titleEl    = document.getElementById('title');
+  var truthEl    = document.getElementById('truth');
+  var chListEl   = document.getElementById('ch-list');
 
   // ===========================================================================
   //  SIMULATION
@@ -301,7 +300,7 @@
     nodesEl.innerHTML = html;
     titleEl.value = state.title;
     renderTruthTable();
-    if (!challengesEl.hidden) renderChallenges();
+    renderChallenges();
   }
 
   // editable group name, above the group's members
@@ -350,13 +349,11 @@
   function esc(s) { return s.replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
 
   function renderToolbar() {
-    var html = '<span class="tool create" data-act="create">CREATE</span>';
-    Object.keys(library).forEach(function (name) {
+    gateListEl.innerHTML = Object.keys(library).map(function (name) {
       var def = library[name];
-      html += '<span class="tool palette" data-palette="' + name + '">' +
-              '<span class="sw" style="background:' + def.color + '"></span>' + esc(name) + '</span>';
-    });
-    toolbarEl.innerHTML = html;
+      return '<span class="tool palette" data-palette="' + name + '" title="Drag onto the canvas">' +
+             '<span class="sw" style="background:' + def.color + '"></span>' + esc(name) + '</span>';
+    }).join('');
   }
 
   // ===========================================================================
@@ -442,13 +439,12 @@
     render();
   });
 
-  toolbarEl.addEventListener('pointerdown', function (e) {
+  gateListEl.addEventListener('pointerdown', function (e) {
     var pal = e.target.closest('[data-palette]');
     if (pal) { startPaletteDrag(pal.getAttribute('data-palette'), e); return; }
   });
-  toolbarEl.addEventListener('click', function (e) {
-    if (e.target.closest('[data-act="create"]')) createGate();
-  });
+  createBtn.addEventListener('click', createGate);
+  resetBtn.addEventListener('click', resetProgress);
 
   // delete selected gate
   window.addEventListener('keydown', function (e) {
@@ -694,44 +690,34 @@
     render();
   }
 
+  // compact checklist; the active row (first unlocked, unsolved) is expanded
+  // with its hint, Check button, and last feedback. solved rows offer Rebuild.
   function renderChallenges() {
     chListEl.innerHTML = SCENARIOS.map(function (sc, i) {
       var done = isSolved(sc.name);
       var unlocked = isUnlocked(i);
-      var msg  = chMsg[sc.name];
-      var status = done ? '✓' : (unlocked ? '○' : '🔒');
-      var action = unlocked
-        ? '<button class="ch-check" data-check="' + sc.name + '">' + (done ? 'Rebuild' : 'Check') + '</button>'
-        : '<span class="ch-lock-tag">Locked</span>';
-      var hint = unlocked
-        ? esc(sc.hint)
-        : 'Complete ' + esc(SCENARIOS[i - 1].name) + ' to unlock.';
-      return '<div class="ch-row' + (done ? ' done' : '') + (unlocked ? '' : ' locked') + '">' +
+      var active = unlocked && !done;                 // sequential -> at most one active
+      var cls = done ? 'done' : (active ? 'active' : 'locked');
+      var status = done ? '✓' : (active ? '○' : '🔒');
+      var action = done
+        ? '<button class="ch-check" data-check="' + sc.name + '">Rebuild</button>'
+        : (active ? '<button class="ch-check" data-check="' + sc.name + '">Check</button>' : '');
+      var msg = chMsg[sc.name];
+      return '<div class="ch-row ' + cls + '">' +
                '<div class="ch-row-top">' +
                  '<span class="ch-status">' + status + '</span>' +
                  '<span class="ch-name">' + esc(sc.name) + '</span>' +
                  action +
                '</div>' +
-               '<div class="ch-hint">' + hint + '</div>' +
-               (unlocked && msg ? '<div class="ch-msg ' + (msg.ok ? 'ok' : 'err') + '">' + esc(msg.text) + '</div>' : '') +
+               (active ? '<div class="ch-hint">' + esc(sc.hint) + '</div>' : '') +
+               (active && msg ? '<div class="ch-msg ' + (msg.ok ? 'ok' : 'err') + '">' + esc(msg.text) + '</div>' : '') +
              '</div>';
     }).join('');
   }
 
-  function toggleChallenges(on) {
-    challengesEl.hidden = !on;
-    chToggle.classList.toggle('active', on);
-    if (on) renderChallenges();
-  }
-
-  chToggle.addEventListener('click', function () { toggleChallenges(challengesEl.hidden); });
-  challengesEl.addEventListener('click', function (e) {
+  chListEl.addEventListener('click', function (e) {
     var c = e.target.closest('[data-check]');
-    if (c) { checkScenario(c.getAttribute('data-check')); return; }
-    var a = e.target.closest('[data-ch]');
-    if (!a) return;
-    if (a.getAttribute('data-ch') === 'close') toggleChallenges(false);
-    if (a.getAttribute('data-ch') === 'reset') resetProgress();
+    if (c) checkScenario(c.getAttribute('data-check'));
   });
 
   // ===========================================================================
@@ -755,7 +741,6 @@
   // ===========================================================================
   //  TRUTH TABLE  (every input combination evaluated through the simulator)
   // ===========================================================================
-  var TT_KEY  = 'logicgates.truthtable';
   var TT_MAX_INPUTS = 10;   // 2^10 = 1024 rows; beyond this we just show a note
 
   // one column per bit-member; multi-member groups suffix the bit index (A0, A1…)
@@ -770,7 +755,6 @@
   }
 
   function renderTruthTable() {
-    if (truthEl.hidden) return;
     var n = flatInputs().length;
     if (n > TT_MAX_INPUTS) {
       truthEl.innerHTML = '<div class="tt-note">Too many inputs to tabulate (max ' + TT_MAX_INPUTS + ' bits).</div>';
@@ -839,30 +823,13 @@
            '</div>';
   }
 
-  function applyTruthVisible(on) {
-    truthEl.hidden = !on;
-    ttToggle.checked = on;
-    if (on) renderTruthTable();
-  }
-
-  ttToggle.addEventListener('change', function () {
-    try { localStorage.setItem(TT_KEY, ttToggle.checked ? '1' : '0'); } catch (e) {}
-    applyTruthVisible(ttToggle.checked);
-  });
-
-  // pause / resume the challenge diff inside the truth table
+  // pause / resume the challenge diff inside the always-on truth table
   truthEl.addEventListener('click', function (e) {
     var b = e.target.closest('[data-tt]');
     if (!b) return;
     compareOff = b.getAttribute('data-tt') === 'cmp-off';
     renderTruthTable();
   });
-
-  function restoreTruth() {
-    var v;
-    try { v = localStorage.getItem(TT_KEY); } catch (e) {}
-    applyTruthVisible(v === '1');
-  }
 
   // ===========================================================================
   //  THEME  (Auto / Light / Dark — Auto follows the OS via CSS media query)
@@ -896,7 +863,6 @@
   //  BOOT
   // ===========================================================================
   restoreTheme();
-  restoreTruth();
   restore();
   renderToolbar();
   render();

@@ -9,53 +9,53 @@
 <body>
   <div id="app">
     <header id="topbar">
-      <div class="topbar-left">
-        <input id="title" type="text" spellcheck="false" placeholder="name your gate…" />
-        <div id="io-controls">
-          <span class="io-label">Groups</span>
-          <button data-act="add-in"  title="Add input group">+ in</button>
-          <button data-act="del-in"  title="Remove last input group">− in</button>
-          <button data-act="add-out" title="Add output group">+ out</button>
-          <button data-act="del-out" title="Remove last output group">− out</button>
-        </div>
-      </div>
-
-      <div class="topbar-right">
-        <button id="ch-toggle" class="ch-toggle" title="Build-a-gate challenges">Challenges</button>
-
-        <div id="theme-bar" role="group" aria-label="Theme">
-          <button data-theme-opt="system" title="Match system theme">Auto</button>
-          <button data-theme-opt="light"  title="Light theme">Light</button>
-          <button data-theme-opt="dark"   title="Dark theme">Dark</button>
-        </div>
-
-        <label class="switch" title="Show / hide the truth table">
-          <input type="checkbox" id="tt-toggle" />
-          <span class="track"><span class="thumb"></span></span>
-          <span class="switch-label">Truth table</span>
-        </label>
+      <input id="title" type="text" spellcheck="false" placeholder="name your gate…" />
+      <div id="theme-bar" role="group" aria-label="Theme">
+        <button data-theme-opt="system" title="Match system theme">Auto</button>
+        <button data-theme-opt="light"  title="Light theme">Light</button>
+        <button data-theme-opt="dark"   title="Dark theme">Dark</button>
       </div>
     </header>
 
-    <div id="canvas">
-      <svg id="wires"></svg>
-      <div id="nodes"></div>
-      <div id="truth" hidden></div>
+    <div id="main">
+      <aside id="sidebar-left">
+        <div class="side-sec">
+          <div class="side-title">Gates</div>
+          <div id="gate-list"></div>
+          <button id="create-btn" class="side-btn" title="Save the current canvas as a reusable gate (named by the title)">+ Create gate</button>
+        </div>
 
-      <aside id="challenges" hidden>
-        <div class="ch-head">
-          <span>Challenges</span>
-          <button class="ch-close" data-ch="close" title="Close">×</button>
+        <div class="side-sec">
+          <div class="side-title">Groups</div>
+          <div id="io-controls">
+            <button data-act="add-in"  title="Add input group">+ in</button>
+            <button data-act="del-in"  title="Remove last input group">− in</button>
+            <button data-act="add-out" title="Add output group">+ out</button>
+            <button data-act="del-out" title="Remove last output group">− out</button>
+          </div>
         </div>
-        <div id="ch-list"></div>
-        <div class="ch-foot">
-          <button class="ch-reset" data-ch="reset"
-                  title="Delete all custom gates and progress, keeping only AND and NOT">Reset to AND / NOT</button>
-        </div>
+
+        <div class="side-spacer"></div>
+        <button id="reset-btn" class="side-btn danger"
+                title="Delete all custom gates and progress, keeping only AND and NOT">Reset to AND / NOT</button>
+      </aside>
+
+      <div id="canvas">
+        <svg id="wires"></svg>
+        <div id="nodes"></div>
+      </div>
+
+      <aside id="sidebar-right">
+        <section id="challenges">
+          <div class="side-title">Challenge</div>
+          <div id="ch-list"></div>
+        </section>
+        <section id="truth-wrap">
+          <div class="side-title">Truth table</div>
+          <div id="truth"></div>
+        </section>
       </aside>
     </div>
-
-    <footer id="toolbar"></footer>
   </div>
 
   <script src="app.js"></script>
