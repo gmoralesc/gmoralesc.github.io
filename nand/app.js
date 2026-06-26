@@ -181,6 +181,20 @@
   var truthEl    = document.getElementById('truth');
   var truthWrapEl = document.getElementById('truth-wrap');
   var chListEl   = document.getElementById('ch-list');
+  var mobileTabs = document.getElementById('mobile-tabs');
+  var mobileHint = document.getElementById('mobile-hint');
+  var canvasCtrls = document.getElementById('canvas-controls');
+
+  // ---- responsive / touch mode ----------------------------------------------
+  // On narrow screens the three columns collapse into a bottom sheet and the
+  // canvas switches to tap-to-place / tap-to-connect plus pan & pinch-zoom.
+  var mq = window.matchMedia('(max-width: 760px)');
+  var mobile = mq.matches;
+  var view = { scale: 1, tx: 0, ty: 0 };   // canvas pan/zoom transform (mobile only)
+  var armedGate = null;       // palette gate awaiting a tap-to-place
+  var pendingPort = null;     // first port of a tap-to-connect pair
+  var suppressTap = false;    // set after a pan/pinch so its trailing click is ignored
+  var gPointers = {}, gMode = null, gStart = null;   // active canvas-gesture pointers
 
   // ===========================================================================
   //  SIMULATION
@@ -359,7 +373,8 @@
       var def = library[g.def], w = gateWidth(def), h = gateHeight(def);
       html += '<div class="gate' + (selected === g.id ? ' selected' : '') + '" data-gate="' + g.id +
               '" style="left:' + g.x + 'px;top:' + g.y + 'px;width:' + w + 'px;height:' + h + 'px;background:' + def.color + '">' +
-              esc(def.name);
+              esc(def.name) +
+              (mobile && selected === g.id ? '<button class="gate-del" data-del="' + g.id + '" title="Delete gate">✕</button>' : '');
       for (var i = 0; i < def.inputs; i++)
         html += port(g.id, 'in', i, 0, portY(i, def.inputs, h));
       for (var j = 0; j < def.outputs; j++)
@@ -392,6 +407,7 @@
     });
 
     nodesEl.innerHTML = html;
+    if (mobile) { applyView(); markPendingPort(); }
     titleEl.value = state.title;
     renderTruthTable();
     renderChallenges();
@@ -455,17 +471,27 @@
   // ===========================================================================
   //  INTERACTION
   // ===========================================================================
+  // client coords -> canvas-space coords, inverting the pan/zoom transform
+  // (view is identity on desktop, so this is a plain offset there)
   function canvasPoint(e) {
     var r = canvasEl.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
+    return {
+      x: (e.clientX - r.left - view.tx) / view.scale,
+      y: (e.clientY - r.top  - view.ty) / view.scale
+    };
   }
 
   canvasEl.addEventListener('pointerdown', function (e) {
     if (e.target.closest('input, button')) return;   // name field or group control — let its click fire, don't re-render
-    var portEl = e.target.closest('[data-port], .port');
-    if (portEl && portEl.classList.contains('port')) { startWire(portEl, e); return; }
+    if (mobile) suppressTap = false;                  // a fresh touch clears any stale pan/pinch guard
+    var portEl = e.target.closest('.port');
+    if (portEl) {
+      if (mobile) return;                             // touch wiring is tap-based (see click handler)
+      startWire(portEl, e); return;
+    }
     var gateEl = e.target.closest('[data-gate]');
     if (gateEl) { startGateDrag(gateEl.getAttribute('data-gate'), e); return; }
+    if (mobile) { gestureDown(e); return; }           // pan / pinch on empty canvas; taps fall through to click
     if (!e.target.closest('[data-toggle]')) { selected = null; render(); }
   });
 
@@ -506,6 +532,16 @@
 
   // clicks: group member +/-, toggle inputs, delete wires
   canvasEl.addEventListener('click', function (e) {
+    if (mobile && suppressTap) return;   // this click ended a pan/pinch — ignore it
+
+    var del = e.target.closest('[data-del]');
+    if (del) { removeNode(del.getAttribute('data-del')); selected = null; render(); return; }
+
+    if (mobile) {
+      var portEl = e.target.closest('.port');
+      if (portEl) { tapPort(refOf(portEl)); return; }
+    }
+
     var gb = e.target.closest('[data-group-act]');
     if (gb) { groupAction(gb.getAttribute('data-group'), gb.getAttribute('data-group-act')); return; }
 
@@ -520,6 +556,12 @@
       var id = wire.getAttribute('data-wire');
       state.wires = state.wires.filter(function (w) { return w.id !== id; });
       render();
+      return;
+    }
+    if (mobile) {   // tap on empty canvas
+      if (armedGate) { placeArmed(canvasPoint(e)); return; }
+      if (pendingPort) { pendingPort = null; updateHint(); render(); return; }
+      if (selected && !e.target.closest('[data-gate]')) { selected = null; render(); }
     }
   });
 
@@ -537,7 +579,14 @@
 
   gateListEl.addEventListener('pointerdown', function (e) {
     var pal = e.target.closest('[data-palette]');
-    if (pal) { startPaletteDrag(pal.getAttribute('data-palette'), e); return; }
+    if (!pal) return;
+    if (mobile) return;                              // touch mode arms on click (tap-to-place)
+    startPaletteDrag(pal.getAttribute('data-palette'), e);
+  });
+  gateListEl.addEventListener('click', function (e) {
+    if (!mobile) return;
+    var pal = e.target.closest('[data-palette]');
+    if (pal) armGate(pal.getAttribute('data-palette'));
   });
   createBtn.addEventListener('click', createGate);
   resetBtn.addEventListener('click', resetProgress);
@@ -1007,13 +1056,179 @@
   }
 
   // ===========================================================================
+  //  MOBILE  (bottom-sheet panels, tap-to-place / tap-to-connect, pan & zoom)
+  // ===========================================================================
+  // The pan/zoom transform lives on the #nodes and #wires layers; the canvas
+  // element itself is untransformed, so getBoundingClientRect stays stable and
+  // canvasPoint just inverts the transform (see below).
+  function applyView() {
+    var t = 'translate(' + view.tx + 'px,' + view.ty + 'px) scale(' + view.scale + ')';
+    nodesEl.style.transform = t;
+    svgEl.style.transform = t;
+  }
+  function resetView() {
+    view = { scale: 1, tx: 0, ty: 0 };
+    nodesEl.style.transform = '';
+    svgEl.style.transform = '';
+  }
+  // zoom/pan so the whole circuit (gates plus the edge io) fits on screen
+  function fitView() {
+    var L = layout(), W = L.W, H = L.H;
+    var minX = 0, minY = 0, maxX = W, maxY = H;
+    state.gates.forEach(function (g) {
+      var def = library[g.def], w = gateWidth(def), h = gateHeight(def);
+      minX = Math.min(minX, g.x); minY = Math.min(minY, g.y);
+      maxX = Math.max(maxX, g.x + w); maxY = Math.max(maxY, g.y + h);
+    });
+    var pad = 24, cw = (maxX - minX) + pad * 2, ch = (maxY - minY) + pad * 2;
+    var s = Math.min(W / cw, H / ch, 1);   // never zoom past 1:1
+    view.scale = s;
+    view.tx = -(minX - pad) * s + (W - cw * s) / 2;
+    view.ty = -(minY - pad) * s + (H - ch * s) / 2;
+    applyView();
+  }
+
+  function markPendingPort() {
+    if (!pendingPort) return;
+    var el = nodesEl.querySelector('.port[data-owner="' + pendingPort.owner +
+             '"][data-side="' + pendingPort.side + '"][data-index="' + pendingPort.index + '"]');
+    if (el) el.classList.add('pending');
+  }
+  function updateHint() {
+    if (!mobile) { mobileHint.hidden = true; return; }
+    var txt = armedGate ? ('Placing ' + armedGate + ' — tap the canvas')
+            : pendingPort ? 'Tap the other port to connect'
+            : '';
+    if (!txt) { mobileHint.hidden = true; return; }
+    mobileHint.innerHTML = '<span>' + esc(txt) + '</span><button data-hint="cancel" title="Cancel">✕</button>';
+    mobileHint.hidden = false;
+  }
+  function clearMobileActions() { armedGate = null; pendingPort = null; updateHint(); }
+
+  function armGate(name) {
+    armedGate = name; pendingPort = null;
+    document.body.setAttribute('data-sheet', 'collapsed');   // reveal the canvas to tap into
+    syncTabs(); updateHint();
+  }
+  function placeArmed(pt) {
+    var def = library[armedGate], w = gateWidth(def), h = gateHeight(def);
+    state.gates.push({ id: nextId('g'), def: armedGate, x: pt.x - w / 2, y: pt.y - h / 2 });
+    render();   // stay armed so several gates can be dropped in a row (cancel via the pill)
+  }
+  function tapPort(ref) {
+    if (!pendingPort) { pendingPort = ref; updateHint(); markPendingPort(); return; }
+    if (pendingPort.owner !== ref.owner) addWire(pendingPort, ref);
+    pendingPort = null; updateHint(); render();
+  }
+
+  // ---- bottom-sheet tabs ----
+  function syncTabs() {
+    var p = document.body.getAttribute('data-panel');
+    var collapsed = document.body.getAttribute('data-sheet') === 'collapsed';
+    Array.prototype.forEach.call(mobileTabs.children, function (b) {
+      b.classList.toggle('active', !collapsed && b.getAttribute('data-panel-tab') === p);
+    });
+  }
+  mobileTabs.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-panel-tab]'); if (!b) return;
+    var p = b.getAttribute('data-panel-tab');
+    var collapsed = document.body.getAttribute('data-sheet') === 'collapsed';
+    if (document.body.getAttribute('data-panel') === p && !collapsed) {
+      document.body.setAttribute('data-sheet', 'collapsed');   // tapping the active tab collapses the sheet
+    } else {
+      document.body.setAttribute('data-panel', p);
+      document.body.removeAttribute('data-sheet');
+    }
+    syncTabs();
+  });
+  mobileHint.addEventListener('click', function (e) {
+    if (e.target.closest('[data-hint]')) { clearMobileActions(); render(); }
+  });
+  canvasCtrls.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-view]');
+    if (b && b.getAttribute('data-view') === 'fit') fitView();
+  });
+
+  // ---- canvas pan / pinch-zoom (touch) ----
+  function gestureDown(e) {
+    gPointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var ids = Object.keys(gPointers);
+    if (ids.length === 1) {
+      gMode = 'tap';
+      gStart = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty, moved: false };
+      window.addEventListener('pointermove', gestureMove);
+      window.addEventListener('pointerup', gestureUp);
+      window.addEventListener('pointercancel', gestureUp);
+    } else if (ids.length === 2) {
+      var p1 = gPointers[ids[0]], p2 = gPointers[ids[1]];
+      var r = canvasEl.getBoundingClientRect();
+      var mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+      gMode = 'pinch'; suppressTap = true;
+      gStart = {
+        dist: Math.max(1, Math.hypot(p2.x - p1.x, p2.y - p1.y)),
+        s0: view.scale, r: r,
+        cp: { x: (mid.x - r.left - view.tx) / view.scale, y: (mid.y - r.top - view.ty) / view.scale }
+      };
+    }
+  }
+  function gestureMove(e) {
+    if (!(e.pointerId in gPointers)) return;
+    gPointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var ids = Object.keys(gPointers);
+    if (gMode === 'pinch' && ids.length >= 2) {
+      var p1 = gPointers[ids[0]], p2 = gPointers[ids[1]];
+      var dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      var mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+      var ns = Math.max(0.3, Math.min(3, gStart.s0 * (dist / gStart.dist)));
+      view.scale = ns;            // keep the start midpoint pinned under the fingers
+      view.tx = (mid.x - gStart.r.left) - ns * gStart.cp.x;
+      view.ty = (mid.y - gStart.r.top) - ns * gStart.cp.y;
+      applyView();
+    } else if (ids.length === 1 && (gMode === 'tap' || gMode === 'pan')) {
+      var dx = e.clientX - gStart.x, dy = e.clientY - gStart.y;
+      if (!gStart.moved && Math.hypot(dx, dy) > 6) { gStart.moved = true; gMode = 'pan'; suppressTap = true; }
+      if (gStart.moved) { view.tx = gStart.tx + dx; view.ty = gStart.ty + dy; applyView(); }
+    }
+  }
+  function gestureUp(e) {
+    delete gPointers[e.pointerId];
+    var ids = Object.keys(gPointers);
+    if (ids.length === 0) {
+      window.removeEventListener('pointermove', gestureMove);
+      window.removeEventListener('pointerup', gestureUp);
+      window.removeEventListener('pointercancel', gestureUp);
+      gMode = null; gStart = null;
+    } else if (ids.length === 1) {   // pinch -> single-finger pan: re-seat so it doesn't jump
+      gMode = 'pan';
+      gStart = { x: gPointers[ids[0]].x, y: gPointers[ids[0]].y, tx: view.tx, ty: view.ty, moved: true };
+    }
+  }
+
+  // ---- react to viewport / mode flips ----
+  function onModeChange() {
+    mobile = mq.matches;
+    clearMobileActions();
+    resetView();
+    document.body.removeAttribute('data-sheet');
+    if (mobile) applyView();
+    syncTabs();
+    render();
+  }
+  if (mq.addEventListener) mq.addEventListener('change', onModeChange);
+  else if (mq.addListener) mq.addListener(onModeChange);
+
+  // ===========================================================================
   //  BOOT
   // ===========================================================================
   restoreTheme();
   restore();
   renderToolbar();
+  document.body.setAttribute('data-panel', 'gates');
   render();
   autoSetupActive();   // configure the canvas for whichever challenge is active on load
+  syncTabs();
+  updateHint();
+  if (mobile) applyView();
 
   // Re-render whenever the canvas is actually sized. A ResizeObserver fires
   // once right after the first layout (fixing a stale first-paint size) and on

@@ -40,6 +40,9 @@
       <div id="canvas">
         <svg id="wires"></svg>
         <div id="nodes"></div>
+        <div id="canvas-controls">
+          <button data-view="fit" title="Fit circuit to screen">⤢</button>
+        </div>
       </div>
 
       <aside id="sidebar-right">
@@ -55,6 +58,13 @@
                 title="Delete all custom gates and progress, keeping only AND and NOT">Reset challenges</button>
       </aside>
     </div>
+
+    <nav id="mobile-tabs" role="tablist" aria-label="Panels">
+      <button data-panel-tab="gates">Gates</button>
+      <button data-panel-tab="challenge">Challenge</button>
+      <button data-panel-tab="truth">Truth</button>
+    </nav>
+    <div id="mobile-hint" hidden></div>
   </div>
 
   <script src="app.js"></script>
