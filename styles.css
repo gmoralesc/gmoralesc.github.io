@@ -637,7 +637,7 @@ body {
 
   .portrait {
     order: -1;
-    max-width: 14rem;
+    max-width: 20rem;
     margin-inline: auto;
   }
 
