@@ -625,14 +625,24 @@ body {
     grid-template-columns: 1fr;
   }
 
+  /* Tighten the hero so the whole tablet clears the fold on a phone. */
+  .hero {
+    padding-block: 1.5rem 2.5rem;
+  }
+
   .tablet {
-    gap: 2rem;
+    gap: 1.5rem;
+    padding: 1.25rem;
   }
 
   .portrait {
     order: -1;
-    max-width: 20rem;
+    max-width: 14rem;
     margin-inline: auto;
+  }
+
+  .portrait figcaption {
+    margin-top: 0.6rem;
   }
 
   .book-plate {
