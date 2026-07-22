@@ -3,10 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#c53e22" />
     <title>Gustavo Morales - Software Engineer</title>
     <meta
       name="description"
-      content="Who loved code, passionate about teaching and mentoring. I create content about programming."
+      content="Software engineer. I build products, write books, and teach people to code."
     />
     <meta
       name="keywords"
@@ -18,242 +19,187 @@
     <meta property="og:title" content="Gustavo Morales - Software Engineer" />
     <meta
       property="og:description"
-      content="Software Engineer passionate about code, teaching, and mentoring. Creator of programming books and tutorials."
+      content="Software engineer. I build products, write books, and teach people to code."
     />
-    <meta property="og:image" content="https://gmoralesc.me/public/me.jpg" />
+    <meta property="og:image" content="https://gmoralesc.me/public/general.jpg" />
     <meta property="og:url" content="https://gmoralesc.me" />
     <meta name="twitter:card" content="summary_large_image" />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/styles.css" />
     <script>
-      tailwind.config = { darkMode: 'class' }
-    </script>
-    <script>
-      (function() {
-        const theme = localStorage.getItem('theme');
-        if (theme === 'dark' || (theme === 'system' || !theme) && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-          document.documentElement.classList.add('dark');
-        }
+      // Set the theme before first paint to avoid a flash.
+      (function () {
+        var theme = localStorage.getItem('theme') || 'system';
+        var dark =
+          theme === 'dark' ||
+          (theme === 'system' &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) document.documentElement.classList.add('dark');
       })();
     </script>
   </head>
-  <body class="min-h-screen flex flex-col bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
-    <nav class="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
-      <div class="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
-        <div class="flex items-center gap-4">
-          <a href="/" class="text-lg font-semibold text-gray-900 hover:text-gray-600 dark:text-gray-100 dark:hover:text-gray-300 transition-colors">
-            @gmoralesc
-          </a>
-          <div class="relative">
-            <button
-              id="theme-toggle"
-              class="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md transition-colors"
-              aria-label="Toggle theme"
-            >
-              <svg id="theme-icon-system" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              <svg id="theme-icon-light" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="masthead">
+      <div class="shell">
+        <a class="wordmark" href="/">@gmoralesc</a>
+        <nav>
+          <a class="nav-link" href="/books">Books</a>
+          <button
+            id="theme-switch"
+            class="theme-switch"
+            type="button"
+            role="switch"
+            aria-checked="false"
+            aria-label="Dark theme"
+          >
+            <span class="knob">
+              <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
-              <svg id="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
               </svg>
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            <div id="theme-menu" class="absolute left-0 mt-1 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg hidden z-50">
-              <button data-theme="system" class="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                System
-              </button>
-              <button data-theme="light" class="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-                Light
-              </button>
-              <button data-theme="dark" class="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-                Dark
-              </button>
+            </span>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero">
+        <div class="shell">
+          <div class="tablet">
+            <div class="inscription">
+              <p class="eyebrow">Software engineer</p>
+              <!-- Set the way Rome cut it: capitals only, V for U,
+                   interpuncts where we would put a space. -->
+              <h1 aria-label="Gustavo Morales">
+                <span aria-hidden="true"
+                  >GVSTAVS <span class="interpunct">&middot;</span> MORALES</span
+                >
+              </h1>
+              <p class="translit">Gustavo Morales</p>
+              <p class="lede">
+                I build products, write books about JavaScript and Node.js, and
+                teach people to code.
+              </p>
             </div>
+            <figure class="portrait">
+              <img
+                src="/public/general.jpg"
+                alt="Engraved portrait of Gustavo Morales as a Roman commander in a plumed helmet"
+                width="1024"
+                height="1024"
+              />
+              <figcaption>Engraved after the manner of the ancients</figcaption>
+            </figure>
           </div>
-        </div>
-        <a href="/books" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors">
-          Books
-        </a>
-      </div>
-    </nav>
-
-    <main class="flex-1 px-6 py-16">
-      <div class="max-w-2xl mx-auto text-center mb-20">
-        <h1 class="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-8">
-          Hi, I'm Gustavo Morales
-        </h1>
-        <img
-          src="public/me.jpg"
-          alt="Gustavo Morales"
-          class="w-48 h-48 md:w-64 md:h-64 rounded-full object-cover mx-auto mb-8 shadow-lg"
-        />
-        <p class="text-xl text-gray-600 dark:text-gray-400 leading-relaxed">
-          Software Engineer who loved code, passionate about teaching and
-          mentoring. I create content about programming.
-        </p>
-      </div>
-
-      <section class="max-w-4xl mx-auto">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 text-center mb-10">Products</h2>
-        <div class="grid md:grid-cols-3 gap-6">
-          <a
-            href="https://www.zalaryo.com/"
-            target="_blank"
-            class="block p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-all text-center"
-          >
-            <img src="public/zalaryo.png" alt="Zalaryo" class="w-24 h-24 mx-auto mb-4 rounded-lg" />
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Zalaryo CRM</h3>
-            <p class="text-gray-600 dark:text-gray-400 text-sm">
-              A modern CRM for sales teams. Manage customers, track deals, and close more sales with powerful automation and insights.
-            </p>
-          </a>
-          <a
-            href="https://www.brainbreak.club/"
-            target="_blank"
-            class="block p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-all text-center"
-          >
-            <img src="public/brainbreak.png" alt="Brain Break" class="w-24 h-24 mx-auto mb-4 rounded-lg" />
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Brain Break Club</h3>
-            <p class="text-gray-600 dark:text-gray-400 text-sm">
-              Daily puzzles for your mind. Quick challenges to compete with friends and have fun during your work breaks.
-            </p>
-          </a>
-          <a
-            href="https://www.awesomenodejs.dev/"
-            target="_blank"
-            class="block p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-all text-center"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-24 h-24 mx-auto mb-4 text-gray-900 dark:text-gray-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-            </svg>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Awesome Node.js</h3>
-            <p class="text-gray-600 dark:text-gray-400 text-sm">
-              Free learning platform for Node.js. Quality resources and expert guidance for developers at all skill levels.
-            </p>
-          </a>
         </div>
       </section>
 
-      <section class="max-w-4xl mx-auto mt-16">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 text-center mb-10">Projects</h2>
-        <div class="grid md:grid-cols-2 gap-6">
-          <a
-            href="https://cap-board.vercel.app"
-            target="_blank"
-            class="block p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-all text-center"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-24 h-24 mx-auto mb-4 text-gray-900 dark:text-gray-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-            </svg>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Cap Board</h3>
-            <p class="text-gray-600 dark:text-gray-400 text-sm">
-              Personal link board to collect, organize, and preview URLs with automatically extracted metadata in a unified dashboard.
-            </p>
-          </a>
-          <a
-            href="https://cap-budget.vercel.app"
-            target="_blank"
-            class="block p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-all text-center"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-24 h-24 mx-auto mb-4 text-gray-900 dark:text-gray-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
-            </svg>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Cap Budget</h3>
-            <p class="text-gray-600 dark:text-gray-400 text-sm">
-              Track expenses with AI-powered categorization. Import transactions, let AI categorize them, and visualize spending patterns.
-            </p>
-          </a>
+      <div class="shell">
+        <div class="rosette" role="separator" aria-hidden="true">
+          <span>&#10037;</span>
+        </div>
+      </div>
+
+      <section class="section" id="products">
+        <div class="shell">
+          <div class="section-head">
+            <p class="eyebrow">Opera</p>
+            <h2 class="section-title">Products</h2>
+          </div>
+          <div class="grid cols-3">
+            <a class="card" href="https://www.zalaryo.com/" target="_blank" rel="noopener">
+              <img class="mark" src="/public/zalaryo.png" alt="" width="96" height="96" />
+              <h3>Zalaryo CRM</h3>
+              <p>
+                A CRM for sales teams. Manage customers, track deals, and close
+                more sales with automation and insights.
+              </p>
+              <span class="host">zalaryo.com</span>
+            </a>
+            <a class="card" href="https://www.brainbreak.club/" target="_blank" rel="noopener">
+              <img class="mark" src="/public/brainbreak.png" alt="" width="96" height="96" />
+              <h3>Brain Break Club</h3>
+              <p>
+                Daily puzzles for your mind. Quick challenges to compete with
+                friends during your work breaks.
+              </p>
+              <span class="host">brainbreak.club</span>
+            </a>
+            <a class="card" href="https://www.awesomenodejs.dev/" target="_blank" rel="noopener">
+              <svg class="mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+              </svg>
+              <h3>Awesome Node.js</h3>
+              <p>
+                A free learning platform for Node.js. Quality resources and
+                guidance for developers at every level.
+              </p>
+              <span class="host">awesomenodejs.dev</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="projects">
+        <div class="shell">
+          <div class="section-head">
+            <p class="eyebrow">Fabrica</p>
+            <h2 class="section-title">Projects</h2>
+          </div>
+          <div class="grid cols-2">
+            <a class="card" href="https://cap-board.vercel.app" target="_blank" rel="noopener">
+              <svg class="mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+              </svg>
+              <h3>Cap Board</h3>
+              <p>
+                A personal link board. Collect, organize, and preview URLs with
+                metadata pulled in automatically.
+              </p>
+              <span class="host">cap-board.vercel.app</span>
+            </a>
+            <a class="card" href="https://cap-budget.vercel.app" target="_blank" rel="noopener">
+              <svg class="mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
+              </svg>
+              <h3>Cap Budget</h3>
+              <p>
+                Track expenses with AI categorization. Import transactions and
+                see where the money actually goes.
+              </p>
+              <span class="host">cap-budget.vercel.app</span>
+            </a>
+          </div>
         </div>
       </section>
     </main>
 
-    <footer class="bg-gray-50 dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
-      <div class="max-w-4xl mx-auto px-6 py-8 text-center">
-        <p class="text-gray-600 dark:text-gray-400 font-medium mb-4">Follow me on</p>
-        <div class="flex justify-center gap-6">
-          <a
-            aria-label="Follow me on X"
-            href="https://twitter.com/gmoralesc"
-            target="_blank"
-            class="text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 1200 1227"
-              fill="currentColor"
-            >
-              <path
-                d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.137 519.284H714.163ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.854V687.828Z"
-              />
+    <footer class="colophon">
+      <div class="shell">
+        <small>Viae &middot; Find me</small>
+        <div class="socials">
+          <a aria-label="Follow me on X" href="https://twitter.com/gmoralesc" target="_blank" rel="noopener">
+            <svg viewBox="0 0 1200 1227" aria-hidden="true">
+              <path d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.137 519.284H714.163ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.854V687.828Z" />
             </svg>
           </a>
-          <a
-            aria-label="Follow me on YouTube"
-            href="https://youtube.com/@gmoralesc"
-            target="_blank"
-            class="text-gray-400 hover:text-red-600 transition-colors"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path
-                d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
-              />
+          <a aria-label="Follow me on YouTube" href="https://youtube.com/@gmoralesc" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
             </svg>
           </a>
-          <a
-            aria-label="Follow me on GitHub"
-            href="https://github.com/gmoralesc"
-            target="_blank"
-            class="text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 16 16"
-              fill="currentColor"
-            >
-              <path
-                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"
-              />
+          <a aria-label="Follow me on GitHub" href="https://github.com/gmoralesc" target="_blank" rel="noopener">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
             </svg>
           </a>
-          <a
-            aria-label="Follow me on LinkedIn"
-            href="https://www.linkedin.com/in/gmoralesc"
-            target="_blank"
-            class="text-gray-400 hover:text-blue-600 transition-colors"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 16 16"
-              fill="currentColor"
-            >
-              <path
-                d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854V1.146zm4.943 12.248V6.169H2.542v7.225h2.401zm-1.2-8.212c.837 0 1.358-.554 1.358-1.248-.015-.709-.52-1.248-1.342-1.248-.822 0-1.359.54-1.359 1.248 0 .694.521 1.248 1.327 1.248h.016zm4.908 8.212V9.359c0-.216.016-.432.08-.586.173-.431.568-.878 1.232-.878.869 0 1.216.662 1.216 1.634v3.865h2.401V9.25c0-2.22-1.184-3.252-2.764-3.252-1.274 0-1.845.7-2.165 1.193v.025h-.016a5.54 5.54 0 0 1 .016-.025V6.169h-2.4c.03.678 0 7.225 0 7.225h2.4z"
-              />
+          <a aria-label="Follow me on LinkedIn" href="https://www.linkedin.com/in/gmoralesc" target="_blank" rel="noopener">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854V1.146zm4.943 12.248V6.169H2.542v7.225h2.401zm-1.2-8.212c.837 0 1.358-.554 1.358-1.248-.015-.709-.52-1.248-1.342-1.248-.822 0-1.359.54-1.359 1.248 0 .694.521 1.248 1.327 1.248h.016zm4.908 8.212V9.359c0-.216.016-.432.08-.586.173-.431.568-.878 1.232-.878.869 0 1.216.662 1.216 1.634v3.865h2.401V9.25c0-2.22-1.184-3.252-2.764-3.252-1.274 0-1.845.7-2.165 1.193v.025h-.016a5.54 5.54 0 0 1 .016-.025V6.169h-2.4c.03.678 0 7.225 0 7.225h2.4z" />
             </svg>
           </a>
         </div>
@@ -261,10 +207,7 @@
     </footer>
 
     <!-- Google tag (gtag.js) -->
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=G-2P1LNMY67H"
-    ></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2P1LNMY67H"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag() {
@@ -273,61 +216,6 @@
       gtag('js', new Date());
       gtag('config', 'G-2P1LNMY67H');
     </script>
-    <script>
-      (function() {
-        const toggle = document.getElementById('theme-toggle');
-        const menu = document.getElementById('theme-menu');
-        const icons = {
-          system: document.getElementById('theme-icon-system'),
-          light: document.getElementById('theme-icon-light'),
-          dark: document.getElementById('theme-icon-dark')
-        };
-
-        function getTheme() {
-          return localStorage.getItem('theme') || 'system';
-        }
-
-        const updateIcon = (theme) => {
-          Object.values(icons).forEach(icon => { icon.classList.add('hidden'); });
-          icons[theme].classList.remove('hidden');
-        };
-
-        function applyTheme(theme) {
-          const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-          document.documentElement.classList.toggle('dark', isDark);
-          updateIcon(theme);
-        }
-
-        function setTheme(theme) {
-          localStorage.setItem('theme', theme);
-          applyTheme(theme);
-        }
-
-        // Initialize
-        applyTheme(getTheme());
-
-        // Toggle menu
-        toggle.addEventListener('click', (e) => {
-          e.stopPropagation();
-          menu.classList.toggle('hidden');
-        });
-
-        // Theme selection
-        menu.querySelectorAll('button[data-theme]').forEach(btn => {
-          btn.addEventListener('click', () => {
-            setTheme(btn.dataset.theme);
-            menu.classList.add('hidden');
-          });
-        });
-
-        // Close menu on outside click
-        document.addEventListener('click', () => menu.classList.add('hidden'));
-
-        // Listen for system theme changes
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-          if (getTheme() === 'system') applyTheme('system');
-        });
-      })();
-    </script>
+    <script src="/theme.js"></script>
   </body>
 </html>

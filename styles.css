@@ -1,0 +1,688 @@
+/* ==========================================================================
+   gmoralesc.me — hand-written stylesheet
+   Roman palette: warm sand paper, ink, terracotta (minium) accent,
+   Aegean teal. No framework, no webfonts.
+   ========================================================================== */
+
+/* --- Tokens: light (day) ------------------------------------------------- */
+:root {
+  color-scheme: light;
+
+  --ink: #24211d;
+  --ink-soft: #68625a;
+  --sand: #f2ede3;
+  --paper: #fffdf8;
+  --paper-deep: #e9e2d5;
+  --plate: #ece3cf; /* matches the parchment baked into the portrait */
+  --sun: #c53e22;
+  --sun-pale: #f5b29e;
+  --teal: #355f5a;
+  --teal-bright: #3f7068;
+  --line: #d8d0c3;
+  --line-strong: #bdb2a0;
+
+  --shadow-sm: 0 8px 24px rgba(7, 20, 24, 0.08);
+  --shadow-lg: 0 28px 70px rgba(36, 33, 29, 0.16);
+
+  --portrait-blend: multiply;
+  --weave: rgba(36, 33, 29, 0.035);
+  --wash: rgba(197, 62, 34, 0.05);
+
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino,
+    "Book Antiqua", Georgia, serif;
+  --font-label: "Avenir Next Condensed", "Arial Narrow", ui-sans-serif,
+    system-ui, sans-serif;
+
+  --measure: 34rem;
+  --wide: 62rem;
+  --radius: 6px;
+}
+
+/* --- Tokens: dark (night) ------------------------------------------------ */
+:root.dark {
+  color-scheme: dark;
+
+  --ink: #ebe4d6;
+  --ink-soft: #a49c8d;
+  --sand: #0b0c0a;
+  --paper: #151713;
+  --paper-deep: #1c1f1a;
+  --plate: #ded5c1;
+  --sun: #d65435;
+  --sun-pale: #f0a38d;
+  --teal: #638b80;
+  --teal-bright: #b5d2c8;
+  --line: rgba(238, 232, 220, 0.16);
+  --line-strong: rgba(238, 232, 220, 0.3);
+
+  --shadow-sm: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 28px 70px rgba(0, 0, 0, 0.6);
+
+  --portrait-blend: normal;
+  --weave: rgba(238, 232, 220, 0.03);
+  --wash: rgba(214, 84, 53, 0.07);
+}
+
+/* --- Reset --------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body,
+h1,
+h2,
+h3,
+p,
+figure,
+ul {
+  margin: 0;
+  padding: 0;
+}
+
+ul {
+  list-style: none;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+  /* Without this the width/height attributes pin the intrinsic height
+     while CSS shrinks the width, stretching the image. */
+  height: auto;
+}
+
+/* Author-level `display: block` above would otherwise beat the UA sheet's
+   [hidden] rule, so the theme icons would all show at once. */
+[hidden] {
+  display: none !important;
+}
+
+a {
+  color: inherit;
+}
+
+/* --- Page ---------------------------------------------------------------- */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--ink);
+  background-color: var(--sand);
+  /* Faint plaster wash + hairline weave, the way a fresco ground sits. */
+  background-image: linear-gradient(150deg, var(--wash), transparent 45%),
+    linear-gradient(0deg, transparent 0, transparent 39px, var(--weave) 40px);
+  background-attachment: fixed, scroll;
+  background-size: 100% 100%, 100% 40px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  font-synthesis: none;
+}
+
+.shell {
+  width: 100%;
+  max-width: var(--wide);
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 0.75rem 1.25rem;
+  background: var(--ink);
+  color: var(--sand);
+  font-family: var(--font-label);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--sun);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* --- Shared type roles --------------------------------------------------- */
+.eyebrow {
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: var(--sun);
+}
+
+.section-title {
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+}
+
+.lede {
+  font-size: 1.1875rem;
+  color: var(--ink-soft);
+  max-width: var(--measure);
+}
+
+/* --- Header -------------------------------------------------------------- */
+.masthead {
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--sand) 86%, transparent);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.masthead .shell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 4rem;
+}
+
+.wordmark {
+  font-family: var(--font-label);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  text-decoration: none;
+  color: var(--ink);
+  transition: color 0.15s ease;
+}
+
+.wordmark:hover {
+  color: var(--sun);
+}
+
+.masthead nav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.nav-link {
+  font-family: var(--font-label);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  text-decoration: none;
+  color: var(--ink-soft);
+  padding-block: 0.35rem;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.nav-link:hover,
+.nav-link[aria-current="page"] {
+  color: var(--ink);
+  border-bottom-color: var(--sun);
+}
+
+/* --- Theme switch -------------------------------------------------------- */
+/* Day / night, two states. Untouched, it follows the system setting; once
+   flipped, the choice sticks. */
+.theme-switch {
+  display: inline-flex;
+  align-items: center;
+  width: 52px;
+  height: 28px;
+  flex-shrink: 0;
+  padding: 2px;
+  background: var(--paper-deep);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.theme-switch:hover {
+  border-color: var(--line-strong);
+}
+
+.theme-switch .knob {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--sun);
+  color: #fffdf8;
+  box-shadow: 0 1px 3px rgba(36, 33, 29, 0.3);
+  transition: transform 0.22s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.theme-switch .knob svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Knob position and icon both key off the applied theme, which the inline
+   head script sets before first paint — so they are correct even if
+   theme.js is slow, cached, or blocked, and never animate on load. */
+:root.dark .theme-switch .knob {
+  transform: translateX(24px);
+}
+
+.theme-switch .icon-moon,
+:root.dark .theme-switch .icon-sun {
+  display: none;
+}
+
+:root.dark .theme-switch .icon-moon {
+  display: block;
+}
+
+/* --- Hero: the inscription ----------------------------------------------- */
+.hero {
+  padding-block: clamp(3rem, 8vw, 6rem);
+}
+
+.tablet {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  align-items: center;
+  gap: clamp(2rem, 5vw, 4rem);
+  padding: clamp(1.75rem, 4vw, 3.25rem);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  /* double rule, the way a carved cartouche is framed */
+  box-shadow: inset 0 0 0 1px var(--paper), inset 0 0 0 5px var(--line),
+    var(--shadow-lg);
+  border-radius: var(--radius);
+}
+
+.inscription {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+
+/* Roman epigraphy: capitals only, V for U, interpuncts for word breaks. */
+.inscription h1 {
+  font-size: clamp(1.875rem, 6.5vw, 4rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  overflow-wrap: break-word;
+}
+
+.inscription h1 .interpunct {
+  color: var(--sun);
+  font-weight: 400;
+  padding-inline: 0.1em;
+}
+
+.inscription .translit {
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--ink-soft);
+}
+
+.inscription .lede {
+  font-size: clamp(1.0625rem, 2vw, 1.25rem);
+}
+
+.portrait {
+  margin: 0;
+}
+
+.portrait img {
+  width: 100%;
+  border-radius: var(--radius);
+  background: var(--plate);
+  mix-blend-mode: var(--portrait-blend);
+}
+
+.portrait figcaption {
+  margin-top: 0.85rem;
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+/* --- Rosette divider: a terracotta star set between two rules ------------- */
+.rosette {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border: 0;
+  margin-block: clamp(2.5rem, 6vw, 4rem);
+}
+
+.rosette::before,
+.rosette::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.rosette span {
+  color: var(--sun);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+/* --- Sections and cards -------------------------------------------------- */
+.section {
+  padding-block: clamp(2rem, 5vw, 3rem);
+}
+
+.section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.grid.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.grid.cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1.5rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: border-color 0.18s ease, transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.card:hover {
+  border-color: var(--sun);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.card .mark {
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 0.35rem;
+  border-radius: 4px;
+  object-fit: cover;
+  color: var(--teal);
+}
+
+.card h3 {
+  font-size: 1.1875rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.card p {
+  font-size: 0.9375rem;
+  color: var(--ink-soft);
+  flex: 1;
+}
+
+/* The destination host — useful signposting, not ornament. */
+.card .host {
+  margin-top: 0.35rem;
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--ink-soft);
+  transition: color 0.18s ease;
+}
+
+.card:hover .host {
+  color: var(--sun);
+}
+
+/* --- Buttons ------------------------------------------------------------- */
+.button {
+  display: inline-block;
+  padding: 0.75rem 1.75rem;
+  font-family: var(--font-label);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  text-decoration: none;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.button.primary {
+  background: var(--sun);
+  color: #fffdf8;
+}
+
+.button.primary:hover {
+  background: var(--ink);
+}
+
+.button.quiet {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.button.quiet:hover {
+  border-color: var(--sun);
+  color: var(--sun);
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* --- Books page ---------------------------------------------------------- */
+.book {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: clamp(1.5rem, 4vw, 3rem);
+  align-items: start;
+}
+
+.book-plate {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 4;
+  padding: 2rem;
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px var(--paper), inset 0 0 0 5px var(--line);
+}
+
+.book-plate svg {
+  width: 100%;
+  max-width: 8rem;
+  height: auto;
+  color: var(--teal);
+}
+
+.book-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.book-body h2 {
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+
+.book-body p {
+  color: var(--ink-soft);
+  max-width: var(--measure);
+}
+
+.stores {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+/* --- Footer -------------------------------------------------------------- */
+.colophon {
+  margin-top: auto;
+  padding-block: 2.5rem;
+  border-top: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.colophon .shell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.socials {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.socials a {
+  color: var(--ink-soft);
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.socials a:hover {
+  color: var(--sun);
+  transform: translateY(-2px);
+}
+
+.socials svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: currentColor;
+}
+
+.colophon small {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-soft);
+}
+
+/* --- Responsive ---------------------------------------------------------- */
+@media (max-width: 62rem) {
+  .grid.cols-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 46rem) {
+  .tablet,
+  .book {
+    grid-template-columns: 1fr;
+  }
+
+  .tablet {
+    gap: 2rem;
+  }
+
+  .portrait {
+    order: -1;
+    max-width: 20rem;
+    margin-inline: auto;
+  }
+
+  .book-plate {
+    max-width: 16rem;
+    margin-inline: auto;
+    aspect-ratio: 4 / 3;
+  }
+
+  .grid.cols-3,
+  .grid.cols-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .colophon .shell {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+/* --- Motion -------------------------------------------------------------- */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hero .tablet {
+  animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .card:hover,
+  .socials a:hover {
+    transform: none;
+  }
+}
